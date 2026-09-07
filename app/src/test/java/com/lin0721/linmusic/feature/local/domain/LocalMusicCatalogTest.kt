@@ -30,6 +30,47 @@ class LocalMusicCatalogTest {
         assertEquals(tracks, LocalMusicCatalog.remove(tracks, "missing"))
     }
 
+    @Test
+    fun mergeUnionsDirectorySourcesForDuplicateTrack() {
+        val merged = LocalMusicCatalog.merge(
+            listOf(track("one", "content://song/1").copy(sourceDirectoryIds = setOf("dir-a"))),
+            listOf(track("replacement", "content://song/1").copy(sourceDirectoryIds = setOf("dir-b")))
+        )
+
+        assertEquals(1, merged.size)
+        assertEquals(setOf("dir-a", "dir-b"), merged.single().sourceDirectoryIds)
+        assertEquals("one", merged.single().id)
+    }
+
+    @Test
+    fun removeAllIsAtomicFromTheCatalogPerspective() {
+        val tracks = listOf(
+            track("one", "content://song/1"),
+            track("two", "content://song/2"),
+            track("three", "content://song/3")
+        )
+
+        assertEquals(
+            listOf("one"),
+            LocalMusicCatalog.removeAll(tracks, setOf("two", "three", "missing")).map { it.id }
+        )
+        assertEquals(tracks, LocalMusicCatalog.removeAll(tracks, emptySet()))
+    }
+
+    @Test
+    fun removingDirectoryRemovesTracksEvenWhenTheyAlsoBelongToAnotherDirectory() {
+        val tracks = listOf(
+            track("one", "content://song/1").copy(sourceDirectoryIds = setOf("dir-a", "dir-b")),
+            track("two", "content://song/2").copy(sourceDirectoryIds = setOf("dir-b")),
+            track("three", "content://song/3").copy(sourceDirectoryIds = setOf("dir-c"))
+        )
+
+        assertEquals(
+            listOf("three"),
+            LocalMusicCatalog.removeDirectory(tracks, "dir-b").map { it.id }
+        )
+    }
+
     private fun track(
         id: String,
         uri: String,

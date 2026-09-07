@@ -2,6 +2,7 @@ package com.lin0721.linmusic.core.network
 
 import com.lin0721.linmusic.core.log.AppLogger
 import com.lin0721.linmusic.core.auth.SessionChangedException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
@@ -29,6 +30,7 @@ inline fun <T, R> apiFlow(
         emit(Result.failure(AppError.BizError(code(response), msg(response))))
     }
 }.catch { e ->
+    if (e is CancellationException) throw e
     AppLogger.e("ApiFlow", "请求异常: ${e::class.simpleName}", e)
     emit(Result.failure(mapToAppError(e)))
 }

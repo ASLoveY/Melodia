@@ -9,6 +9,7 @@ import com.lin0721.linmusic.core.player.PlayerManager
 import com.lin0721.linmusic.core.player.QueueItem
 import com.lin0721.linmusic.feature.local.domain.LOCAL_MUSIC_MIN_DURATION_MS
 import com.lin0721.linmusic.feature.local.domain.LocalImportProgress
+import com.lin0721.linmusic.feature.local.domain.LocalMusicDirectory
 import com.lin0721.linmusic.feature.local.domain.LocalMusicRepository
 import com.lin0721.linmusic.feature.local.domain.LocalTrack
 import java.util.Locale
@@ -55,6 +56,8 @@ class LocalMusicViewModel(
     val messages = _messages.asSharedFlow()
     private var directoryImportJob: Job? = null
     private var directoryImportCancelledByUser = false
+    private val selectionController = LocalSelectionController()
+    val selection = selectionController.state
 
     val tracks = repository.tracks.onEach { _error.value = null }.catch {
         _error.value = resources.getString(R.string.local_load_failed)
@@ -62,15 +65,48 @@ class LocalMusicViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val visibleTracks = combine(tracks, query, sort, ::filterLocalTracks)
         .flowOn(Dispatchers.Default)
+        .onEach { selectionController.setItems(it.map(LocalTrack::id)) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val directories = repository.directories.catch {
+        _error.value = resources.getString(R.string.local_load_failed)
+        emit(emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList<LocalMusicDirectory>())
     val currentTrack = playerManager.currentTrack
     val isPlaying = playerManager.isPlaying
 
-    fun setQuery(value: String) { _query.value = value }
-    fun setSort(value: LocalMusicSort) { _sort.value = value }
+    fun setQuery(value: String) {
+        if (_isRemoving.value) return
+        if (_query.value != value) selectionController.clear()
+        _query.value = value
+    }
+    fun setSort(value: LocalMusicSort) {
+        if (_isRemoving.value) return
+        if (_sort.value != value) selectionController.clear()
+        _sort.value = value
+    }
+
+    fun beginDragSelection(id: String) {
+        if (_isImporting.value || _isRemoving.value) return
+        selectionController.setItems(visibleTracks.value.map(LocalTrack::id))
+        selectionController.beginDrag(id)
+    }
+    fun updateDragSelection(id: String) {
+        if (!_isImporting.value && !_isRemoving.value) selectionController.dragTo(id)
+    }
+    fun endDragSelection() = selectionController.endDrag()
+    fun toggleSelection(id: String) {
+        if (!_isImporting.value && !_isRemoving.value) selectionController.toggle(id)
+    }
+    fun toggleSelectAll() {
+        if (!_isImporting.value && !_isRemoving.value) selectionController.toggleAll()
+    }
+    fun exitSelection() {
+        if (!_isRemoving.value) selectionController.clear()
+    }
 
     fun importUris(uris: List<Uri>) {
-        if (uris.isEmpty() || _isImporting.value) return
+        if (uris.isEmpty() || _isImporting.value || _isRemoving.value) return
+        selectionController.clear()
         _isImporting.value = true
         viewModelScope.launch {
             try {
@@ -95,7 +131,8 @@ class LocalMusicViewModel(
     }
 
     fun importDirectory(uri: Uri) {
-        if (_isImporting.value || directoryImportJob?.isActive == true) return
+        if (_isImporting.value || _isRemoving.value || directoryImportJob?.isActive == true) return
+        selectionController.clear()
         _isImporting.value = true
         directoryImportCancelledByUser = false
         _importProgress.value = LocalImportProgress(scanned = 0, imported = 0, skippedShort = 0)
@@ -137,6 +174,10 @@ class LocalMusicViewModel(
     }
 
     fun play(track: LocalTrack) {
+        if (selection.value.active) {
+            toggleSelection(track.id)
+            return
+        }
         if (playerManager.currentTrack.value?.mediaId == "local:${track.uri}") {
             playerManager.togglePlayPause()
             return
@@ -150,11 +191,26 @@ class LocalMusicViewModel(
     }
 
     fun remove(track: LocalTrack, onRemoved: () -> Unit) {
+        removeTracks(setOf(track.id), onRemoved)
+    }
+
+    fun removeTracks(ids: Set<String>, onRemoved: () -> Unit) {
+        if (ids.isEmpty()) return
+        val confirmedIds = ids.toSet()
+        performRemoval(onRemoved) { repository.removeAll(confirmedIds) }
+    }
+
+    fun removeDirectory(directoryId: String, onRemoved: () -> Unit) {
+        performRemoval(onRemoved) { repository.removeDirectory(directoryId) }
+    }
+
+    private fun performRemoval(onRemoved: () -> Unit, remove: suspend () -> Int) {
         if (_isRemoving.value || _isImporting.value) return
         _isRemoving.value = true
         viewModelScope.launch {
             try {
-                repository.remove(track.id)
+                remove()
+                selectionController.clear()
                 onRemoved()
                 _messages.emit(resources.getString(R.string.local_removed))
             } catch (cancelled: CancellationException) {

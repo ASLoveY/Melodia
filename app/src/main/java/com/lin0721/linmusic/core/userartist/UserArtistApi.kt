@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import retrofit2.http.Body
 import retrofit2.http.POST
 
-// 关注歌手列表（含未登录时的热门歌手兜底）的网易云 Retrofit 接口定义。
+// 关注歌手与热门歌手的接口分别提供；收藏列表不使用热门歌手作为兜底。
 interface UserArtistApi {
 
     // 获取已关注歌手 (需登录)

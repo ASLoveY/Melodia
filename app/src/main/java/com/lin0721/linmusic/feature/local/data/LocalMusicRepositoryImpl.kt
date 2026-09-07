@@ -13,6 +13,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.lin0721.linmusic.feature.local.domain.LocalImportResult
 import com.lin0721.linmusic.feature.local.domain.LocalImportProgress
 import com.lin0721.linmusic.feature.local.domain.LocalMusicCatalog
+import com.lin0721.linmusic.feature.local.domain.LocalMusicDirectory
 import com.lin0721.linmusic.feature.local.domain.LocalMusicRepository
 import com.lin0721.linmusic.feature.local.domain.LocalTrack
 import java.io.IOException
@@ -35,6 +36,7 @@ private const val DATASTORE_NAME = "local_music_prefs"
 private const val UNKNOWN_ARTIST = "未知歌手"
 private const val UNKNOWN_ALBUM = "未知专辑"
 private const val UNKNOWN_TITLE = "未知歌曲"
+private const val DIRECTORY_SCHEMA_VERSION = "1"
 
 private val Context.localMusicDataStore by preferencesDataStore(name = DATASTORE_NAME)
 
@@ -44,6 +46,46 @@ internal fun localDocumentKey(uri: Uri): String = runCatching {
         DocumentsContract.buildDocumentUri(requireNotNull(uri.authority), DocumentsContract.getDocumentId(uri)).toString()
     } else uri.toString()
 }.getOrDefault(uri.toString())
+
+/** Stable id for an ACTION_OPEN_DOCUMENT_TREE grant. */
+internal fun localDirectoryId(uri: Uri): String {
+    val authority = uri.authority
+    val treeDocumentId = runCatching { DocumentsContract.getTreeDocumentId(uri) }.getOrNull()
+    return if (authority != null && treeDocumentId != null) {
+        DocumentsContract.buildTreeDocumentUri(authority, treeDocumentId).toString()
+    } else {
+        uri.toString()
+    }
+}
+
+/**
+ * Tests whether a persisted document URI belongs to a tree root.
+ *
+ * External storage document ids are hierarchical, so the separator is checked explicitly. For
+ * other providers the tree id embedded in the URI must match exactly; a provider-specific path
+ * prefix is not enough to infer ownership.
+ */
+internal fun localDocumentBelongsToDirectory(rootUri: Uri, documentUri: Uri): Boolean {
+    if (rootUri.scheme != "content" || documentUri.scheme != "content") return false
+    if (rootUri.authority != documentUri.authority) return false
+    val rootId = runCatching { DocumentsContract.getTreeDocumentId(rootUri) }.getOrNull()
+        ?: return false
+
+    if (rootUri.authority == "com.android.externalstorage.documents") {
+        val documentId = runCatching { DocumentsContract.getDocumentId(documentUri) }.getOrNull()
+            ?: return false
+        val descendantPrefix = if (rootId.endsWith(":")) rootId else "$rootId/"
+        return documentId == rootId || documentId.startsWith(descendantPrefix)
+    }
+
+    return treeIdFromUri(documentUri) == rootId
+}
+
+private fun treeIdFromUri(uri: Uri): String? {
+    val segments = uri.pathSegments
+    val treeIndex = segments.indexOfFirst { it == "tree" }
+    return segments.getOrNull(treeIndex + 1)?.takeIf { treeIndex >= 0 }
+}
 
 /**
  * URI-backed local music catalog. The repository never copies, renames, or deletes source files.
@@ -56,19 +98,25 @@ class LocalMusicRepositoryImpl(
 
     private companion object {
         val KEY_TRACKS = stringPreferencesKey("tracks_json")
+        val KEY_DIRECTORIES = stringPreferencesKey("directories_json")
+        val KEY_DIRECTORY_SCHEMA = stringPreferencesKey("directories_schema")
     }
 
     private val json = Json { ignoreUnknownKeys = true }
     private val catalogMutex = Mutex()
 
-    override val tracks: Flow<List<LocalTrack>> = context.localMusicDataStore.data.map { prefs ->
-        decode(prefs[KEY_TRACKS])
-    }.flowOn(ioDispatcher)
+    private val snapshotFlow: Flow<CatalogSnapshot> = context.localMusicDataStore.data
+        .map { prefs -> normalizeSnapshot(prefs) }
+        .flowOn(ioDispatcher)
+
+    override val tracks: Flow<List<LocalTrack>> = snapshotFlow.map { it.tracks }
+
+    override val directories: Flow<List<LocalMusicDirectory>> = snapshotFlow.map { it.directories }
 
     override suspend fun importUris(uris: List<Uri>): LocalImportResult =
         withContext(ioDispatcher) {
             catalogMutex.withLock {
-                val batch = ImportBatch(tracks.first())
+                val batch = ImportBatch(readSnapshot())
                 for (uri in uris) {
                     currentCoroutineContext().ensureActive()
                     try {
@@ -98,7 +146,15 @@ class LocalMusicRepositoryImpl(
             context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             val rootId = DocumentsContract.getTreeDocumentId(uri)
             val rootChildren = listChildren(uri, rootId)
-            val batch = ImportBatch(tracks.first())
+            val batch = ImportBatch(readSnapshot())
+            batch.ensureDirectory(
+                LocalMusicDirectory(
+                    id = localDirectoryId(uri),
+                    uri = uri.toString(),
+                    name = queryDirectoryDisplayName(uri, rootId),
+                    addedAt = now()
+                )
+            )
             var scanned = 0
             onProgress(LocalImportProgress(0, 0, 0))
             val summary = scanAudioDocuments(
@@ -111,7 +167,8 @@ class LocalMusicRepositoryImpl(
                         batch.add(
                             DocumentsContract.buildDocumentUriUsingTree(uri, document.id),
                             document.name,
-                            minDurationMs
+                            minDurationMs,
+                            sourceDirectoryId = localDirectoryId(uri)
                         )
                     } catch (cancelled: CancellationException) {
                         throw cancelled
@@ -152,27 +209,141 @@ class LocalMusicRepositoryImpl(
     }
 
     override suspend fun remove(id: String) {
-        withContext(ioDispatcher) {
-            catalogMutex.withLock {
-                context.localMusicDataStore.edit { prefs ->
-                    val updated = LocalMusicCatalog.remove(decode(prefs[KEY_TRACKS]), id)
-                    if (updated.isEmpty()) {
-                        prefs.remove(KEY_TRACKS)
-                    } else {
-                        prefs[KEY_TRACKS] = json.encodeToString(updated)
-                    }
-                }
+        removeAll(setOf(id))
+    }
+
+    override suspend fun removeAll(ids: Set<String>): Int = withContext(ioDispatcher) {
+        if (ids.isEmpty()) return@withContext 0
+        catalogMutex.withLock {
+            val snapshot = readSnapshot()
+            val updated = LocalMusicCatalog.removeAll(snapshot.tracks, ids)
+            val removed = snapshot.tracks.size - updated.size
+            if (removed > 0 || snapshot.needsMigration) {
+                persistSnapshot(updated, snapshot.directories)
             }
+            removed
         }
     }
 
-    /** Stage a complete import under catalogMutex, so cancellation never commits a partial scan. */
-    private inner class ImportBatch(existing: List<LocalTrack>) {
-        private val staged = existing.toMutableList()
-        private val indices = HashMap<String, Int>().apply {
-            existing.forEachIndexed { index, track -> putIfAbsent(localDocumentKey(track.uri.toUri()), index) }
+    override suspend fun removeDirectory(id: String): Int = withContext(ioDispatcher) {
+        if (id.isBlank()) return@withContext 0
+        catalogMutex.withLock {
+            val snapshot = readSnapshot()
+            if (snapshot.directories.none { it.id == id }) return@withLock 0
+            val updated = LocalMusicCatalog.removeDirectory(snapshot.tracks, id)
+            val removed = snapshot.tracks.size - updated.size
+            val directories = snapshot.directories.filterNot { it.id == id }
+            persistSnapshot(updated, directories)
+            removed
         }
-        private var changed = false
+    }
+
+    private suspend fun readSnapshot(): CatalogSnapshot =
+        normalizeSnapshot(context.localMusicDataStore.data.first())
+
+    private suspend fun persistSnapshot(
+        tracks: List<LocalTrack>,
+        directories: List<LocalMusicDirectory>
+    ) {
+        currentCoroutineContext().ensureActive()
+        context.localMusicDataStore.edit { prefs ->
+            currentCoroutineContext().ensureActive()
+            if (tracks.isEmpty()) prefs.remove(KEY_TRACKS)
+            else prefs[KEY_TRACKS] = json.encodeToString(tracks)
+            if (directories.isEmpty()) prefs.remove(KEY_DIRECTORIES)
+            else prefs[KEY_DIRECTORIES] = json.encodeToString(directories)
+            prefs[KEY_DIRECTORY_SCHEMA] = DIRECTORY_SCHEMA_VERSION
+        }
+    }
+
+    private fun normalizeSnapshot(prefs: androidx.datastore.preferences.core.Preferences): CatalogSnapshot {
+        val tracks = decode(prefs[KEY_TRACKS])
+        val directories = decodeDirectories(prefs[KEY_DIRECTORIES])
+        if (prefs[KEY_DIRECTORY_SCHEMA] == DIRECTORY_SCHEMA_VERSION) {
+            return CatalogSnapshot(tracks, directories, needsMigration = false)
+        }
+        return recoverLegacyDirectories(tracks, directories)
+    }
+
+    /**
+     * v1.2.1 stored only tracks. Recover roots from persisted tree grants while the grant still
+     * exists, and use document ids rather than display names to avoid foo/foobar collisions.
+     */
+    private fun recoverLegacyDirectories(
+        tracks: List<LocalTrack>,
+        existingDirectories: List<LocalMusicDirectory>
+    ): CatalogSnapshot {
+        if (tracks.isEmpty()) return CatalogSnapshot(tracks, existingDirectories, true)
+        val recovered = existingDirectories.toMutableList()
+        val recoveredById = recovered.associateBy { it.id }.toMutableMap()
+        val recoveredTracks = tracks.toMutableList()
+        val candidateRoots = linkedMapOf<String, Uri>()
+        runCatching { context.contentResolver.persistedUriPermissions }
+            .getOrDefault(emptyList())
+            .asSequence()
+            .filter { it.isReadPermission }
+            .map { it.uri }
+            .filter { DocumentsContract.isTreeUri(it) }
+            .forEach { rootUri ->
+                candidateRoots.putIfAbsent(localDirectoryId(rootUri), rootUri)
+            }
+
+        // A revoked grant is no longer listed in persistedUriPermissions, but a v1.2.1 track
+        // imported through that grant still embeds the exact tree root in its URI. Keep a
+        // directory entry so the user can remove the stale catalog records.
+        recoveredTracks.asSequence()
+            .map { it.uri.toUri() }
+            .mapNotNull { documentUri ->
+                val authority = documentUri.authority ?: return@mapNotNull null
+                val treeId = treeIdFromUri(documentUri) ?: return@mapNotNull null
+                runCatching { DocumentsContract.buildTreeDocumentUri(authority, treeId) }.getOrNull()
+            }
+            .forEach { rootUri ->
+                candidateRoots.putIfAbsent(localDirectoryId(rootUri), rootUri)
+            }
+
+        candidateRoots.values.asSequence()
+            .forEach { rootUri ->
+                val matchingIndexes = recoveredTracks.indices.filter { index ->
+                    localDocumentBelongsToDirectory(rootUri, recoveredTracks[index].uri.toUri())
+                }
+                if (matchingIndexes.isEmpty()) return@forEach
+
+                val directoryId = localDirectoryId(rootUri)
+                val directory = recoveredById.getOrPut(directoryId) {
+                    LocalMusicDirectory(
+                        id = directoryId,
+                        uri = rootUri.toString(),
+                        name = queryDirectoryDisplayName(
+                            rootUri,
+                            runCatching { DocumentsContract.getTreeDocumentId(rootUri) }.getOrDefault("")
+                        ),
+                        addedAt = matchingIndexes.minOf { recoveredTracks[it].addedAt }
+                    )
+                }
+                matchingIndexes.forEach { index ->
+                    val track = recoveredTracks[index]
+                    if (directory.id !in track.sourceDirectoryIds) {
+                        recoveredTracks[index] = track.copy(
+                            sourceDirectoryIds = track.sourceDirectoryIds + directory.id
+                        )
+                    }
+                }
+            }
+
+        return CatalogSnapshot(recoveredTracks, recoveredById.values.toList(), true)
+    }
+
+    /** Stage a complete import under catalogMutex, so cancellation never commits a partial scan. */
+    private inner class ImportBatch(snapshot: CatalogSnapshot) {
+        private val staged = snapshot.tracks.toMutableList()
+        private val stagedDirectories = snapshot.directories.toMutableList()
+        private val indices = HashMap<String, Int>().apply {
+            snapshot.tracks.forEachIndexed { index, track ->
+                putIfAbsent(localDocumentKey(track.uri.toUri()), index)
+            }
+        }
+        private var changed = snapshot.needsMigration
         var imported = 0
             private set
         var duplicates = 0
@@ -181,16 +352,35 @@ class LocalMusicRepositoryImpl(
             private set
         var failed = 0
 
-        fun add(uri: Uri, displayName: String? = null, minDurationMs: Long? = null) {
+        fun add(
+            uri: Uri,
+            displayName: String? = null,
+            minDurationMs: Long? = null,
+            sourceDirectoryId: String? = null
+        ) {
             verifyReadable(uri)
             val key = localDocumentKey(uri)
             val index = indices[key]
             if (index != null) {
+                if (minDurationMs != null) {
+                    val duration = readMetadata(uri).durationMs
+                        ?: throw IOException("无法识别音频时长")
+                    if (duration < minDurationMs) {
+                        skippedShort++
+                        return
+                    }
+                }
                 // Keep the record's stable id. Repair its access URI only if the old grant no
                 // longer works (e.g. importing the same document through a newly granted tree).
                 val oldTrack = staged[index]
                 if (oldTrack.uri != uri.toString() && runCatching { verifyReadable(oldTrack.uri.toUri()) }.isFailure) {
                     staged[index] = oldTrack.copy(uri = uri.toString())
+                    changed = true
+                }
+                if (sourceDirectoryId != null && sourceDirectoryId !in oldTrack.sourceDirectoryIds) {
+                    staged[index] = staged[index].copy(
+                        sourceDirectoryIds = staged[index].sourceDirectoryIds + sourceDirectoryId
+                    )
                     changed = true
                 }
                 duplicates++
@@ -213,19 +403,32 @@ class LocalMusicRepositoryImpl(
                 artist = metadata.artist ?: UNKNOWN_ARTIST,
                 album = metadata.album ?: UNKNOWN_ALBUM,
                 durationMs = metadata.durationMs ?: 0L,
-                addedAt = now()
+                addedAt = now(),
+                sourceDirectoryIds = sourceDirectoryId?.let(::setOf).orEmpty()
             )
             imported++
             changed = true
         }
 
+        fun ensureDirectory(directory: LocalMusicDirectory) {
+            val index = stagedDirectories.indexOfFirst { it.id == directory.id }
+            if (index < 0) {
+                stagedDirectories += directory
+                changed = true
+            } else {
+                val current = stagedDirectories[index]
+                val updated = current.copy(uri = directory.uri, name = directory.name)
+                if (updated != current) {
+                    stagedDirectories[index] = updated
+                    changed = true
+                }
+            }
+        }
+
         suspend fun commit() {
             currentCoroutineContext().ensureActive()
             if (changed) {
-                context.localMusicDataStore.edit { prefs ->
-                    currentCoroutineContext().ensureActive()
-                    prefs[KEY_TRACKS] = json.encodeToString(staged)
-                }
+                persistSnapshot(staged, stagedDirectories)
             }
         }
 
@@ -254,6 +457,25 @@ class LocalMusicRepositoryImpl(
             ?.substringAfterLast('/')
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
+        ?: UNKNOWN_TITLE
+
+    private fun queryDirectoryDisplayName(uri: Uri, rootId: String): String = runCatching {
+        context.contentResolver.query(
+            DocumentsContract.buildDocumentUriUsingTree(uri, rootId),
+            arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex)
+            else null
+        }
+    }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+        ?: rootId.substringAfterLast(':')
+            .substringAfterLast('/')
+            .trim()
+            .takeIf { it.isNotEmpty() }
         ?: UNKNOWN_TITLE
 
     private fun readMetadata(uri: Uri): ExtractedMetadata {
@@ -289,6 +511,15 @@ class LocalMusicRepositoryImpl(
         }
     }
 
+    private fun decodeDirectories(raw: String?): List<LocalMusicDirectory> {
+        if (raw.isNullOrBlank()) return emptyList()
+        return try {
+            json.decodeFromString<List<LocalMusicDirectory>>(raw)
+        } catch (error: Exception) {
+            throw LocalMusicCatalogCorruptException(error)
+        }
+    }
+
     private class LocalMusicCatalogCorruptException(cause: Throwable) :
         IllegalStateException("本地音乐库数据损坏，原记录未修改", cause)
 
@@ -297,5 +528,11 @@ class LocalMusicRepositoryImpl(
         val artist: String?,
         val album: String?,
         val durationMs: Long?
+    )
+
+    private data class CatalogSnapshot(
+        val tracks: List<LocalTrack>,
+        val directories: List<LocalMusicDirectory>,
+        val needsMigration: Boolean
     )
 }

@@ -204,67 +204,7 @@ class LibraryViewModel(
                 val subcount = subcountDeferred.await()
                 if (generation != libraryLoadGeneration || activeUserId != profile.uid) return@launch
 
-                // 数据归一化 (Mapping)
-                val mappedPlaylists = playlists.mapIndexed { index, playlist ->
-                    val ownerId = playlist.creator?.userId?.takeIf { it > 0 }
-                        ?: playlist.userId.takeIf { it > 0 }
-                    LibraryItem(
-                        id = playlist.id.toString(),
-                        title = playlist.name,
-                        subtitle = "歌单 · ${playlist.creator?.nickname ?: ""}",
-                        coverUrl = playlist.coverImgUrl,
-                        type = LibraryItemType.PLAYLIST,
-                        updateTime = playlist.updateTime,
-                        trackCount = playlist.trackCount,
-                        playCount = playlist.playCount,
-                        isLikedSongs = playlist.specialType == 5 ||
-                            (playlist.specialType == null && index == 0 && ownerId == profile.uid),
-                        isOwnedByMe = ownerId == profile.uid,
-                        ownerId = ownerId
-                    )
-                }.toMutableList()
-
-                val recordPlaylist = LibraryItem(
-                    id = "-2",
-                    title = "听歌排行的歌单",
-                    subtitle = "歌单 · 听歌排行统计",
-                    coverUrl = "",
-                    type = LibraryItemType.PLAYLIST,
-                    updateTime = System.currentTimeMillis(),
-                    trackCount = 0,
-                    playCount = 0,
-                    isLikedSongs = false,
-                    isOwnedByMe = true
-                )
-                if (mappedPlaylists.isNotEmpty()) {
-                    mappedPlaylists.add(1, recordPlaylist)
-                } else {
-                    mappedPlaylists.add(recordPlaylist)
-                }
-
-                val mappedArtists = artists.map { artist ->
-                    LibraryItem(
-                        id = artist.id.toString(),
-                        title = artist.name,
-                        subtitle = "歌手",
-                        coverUrl = artist.avatarUrl,
-                        type = LibraryItemType.ARTIST,
-                        updateTime = 0
-                    )
-                }
-
-                val mappedAlbums = albums.map { album ->
-                    LibraryItem(
-                        id = album.id.toString(),
-                        title = album.name,
-                        subtitle = "专辑 · ${album.artists.joinToString(" • ") { it.name }}",
-                        coverUrl = album.picUrl,
-                        type = LibraryItemType.ALBUM,
-                        updateTime = album.subTime
-                    )
-                }
-
-                val combinedItems = mappedPlaylists + mappedArtists + mappedAlbums
+                val combinedItems = userLibraryItems(profile.uid, playlists, artists, albums)
 
                 _uiState.update { state ->
                     LibraryUiState.Success(
@@ -348,10 +288,10 @@ class LibraryViewModel(
             LibraryFilter.MV -> list.filter { it.type == LibraryItemType.MV }
         }
 
-        // 歌单二级筛选：我创建的 / 他人创建的（"我喜欢的音乐"与"听歌排行"视为我的）
+        // 歌单二级筛选：我创建的 / 他人创建的（"我喜欢的音乐"视为我的）
         if (filter == LibraryFilter.PLAYLIST && ownerFilter != null) {
             list = list.filter { item ->
-                val ownedByMe = item.isOwnedByMe || item.isLikedSongs || item.id == "-2"
+                val ownedByMe = item.isOwnedByMe || item.isLikedSongs
                 if (ownerFilter == LibraryPlaylistOwnerFilter.MINE) ownedByMe else !ownedByMe
             }
         }
@@ -373,16 +313,12 @@ class LibraryViewModel(
 
         val finalList = pinnedItems + sortedUnpinned
 
-        val listWithoutSpecial = finalList.filter { it.id != "-2" && !it.isLikedSongs }
+        val listWithoutSpecial = finalList.filterNot { it.isLikedSongs }
         val likedSongsItem = finalList.find { it.isLikedSongs }
-        val recordItem = finalList.find { it.id == "-2" }
 
         val finalListAdjusted = mutableListOf<LibraryItem>()
         if (likedSongsItem != null) {
             finalListAdjusted.add(likedSongsItem)
-        }
-        if (recordItem != null) {
-            finalListAdjusted.add(recordItem)
         }
         finalListAdjusted.addAll(listWithoutSpecial)
 

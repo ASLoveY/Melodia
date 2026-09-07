@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 interface LocalMusicRepository {
     val tracks: Flow<List<LocalTrack>>
 
+    val directories: Flow<List<LocalMusicDirectory>>
+
     suspend fun importUris(uris: List<Uri>): LocalImportResult
 
     suspend fun importDirectory(
@@ -15,4 +17,8 @@ interface LocalMusicRepository {
     ): LocalImportResult
 
     suspend fun remove(id: String)
+
+    suspend fun removeAll(ids: Set<String>): Int
+
+    suspend fun removeDirectory(id: String): Int
 }

@@ -57,4 +57,16 @@
     <string name="local_remove_confirmation">将「%1$s」移出本地音乐库？原文件会保留，当前队列中的曲目仍可播放。</string>
     <string name="local_removed">已移出音乐库，原文件仍保留</string>
     <string name="local_remove_failed">移除未完成，请重试</string>
+    <string name="local_selection_count">已选择 %1$d 首</string>
+    <string name="local_select_all">全选</string>
+    <string name="local_clear_selection">取消全选</string>
+    <string name="local_exit_selection">退出选择</string>
+    <string name="local_remove_selected">批量移出</string>
+    <string name="local_remove_selected_confirmation">确定将 %1$d 首歌曲移出本地音乐库吗？原文件会保留，当前队列中的曲目仍可播放。</string>
+    <string name="local_directories_count">已导入目录（%1$d）</string>
+    <string name="local_directories">已导入目录</string>
+    <string name="local_directories_empty">暂未导入目录</string>
+    <string name="local_directory_tracks">%1$d 首关联歌曲</string>
+    <string name="local_remove_directory">移除目录</string>
+    <string name="local_remove_directory_confirmation">移除目录「%1$s」及其关联的 %2$d 首歌曲？原文件会保留；即使歌曲来自多个目录，也会从整个音乐库移除。</string>
 </resources>
