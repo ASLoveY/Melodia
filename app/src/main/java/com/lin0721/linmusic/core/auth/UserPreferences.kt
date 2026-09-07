@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.lin0721.linmusic.core.log.AppLogger
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -22,7 +23,8 @@ private val Context.userDataStore by preferencesDataStore(name = "user_prefs")
 data class UserProfile(
     val uid: Long,
     val nickname: String,
-    val avatarUrl: String
+    val avatarUrl: String,
+    val signature: String = ""
 )
 
 // 登录同步期间需要以一次原子会话写入为边界，避免失败回滚覆盖后续登录。
@@ -182,6 +184,31 @@ class UserPreferences(private val context: Context) : LoginSessionStore {
             // 重新命中同一个会话标识。
             prefs[KEY_SESSION_REVISION] = nextRevision(prefs[KEY_SESSION_REVISION])
         }
+    }
+
+    suspend fun sessionRevisionForUser(uid: Long): Long? {
+        val prefs = context.userDataStore.data.first()
+        if (decodeProfile(prefs[KEY_USER_PROFILE])?.uid != uid || prefs[KEY_COOKIES].isNullOrBlank()) return null
+        return prefs[KEY_SESSION_REVISION] ?: 0L
+    }
+
+    // 编辑页只提交仍属于原账号及原资料版本的结果，避免迟到保存覆盖新登录。
+    suspend fun saveProfileForSession(uid: Long, revision: Long, updated: UserProfile): Boolean {
+        require(updated.uid == uid)
+        var saved = false
+        context.userDataStore.edit { prefs ->
+            val current = decodeProfile(prefs[KEY_USER_PROFILE])
+            if (current?.uid == uid && (prefs[KEY_SESSION_REVISION] ?: 0L) == revision &&
+                !prefs[KEY_COOKIES].isNullOrBlank()
+            ) {
+                prefs[KEY_USER_PROFILE] = json.encodeToString(
+                    updated.copy(avatarUrl = updated.avatarUrl.ifBlank { current.avatarUrl })
+                )
+                prefs[KEY_SESSION_REVISION] = nextRevision(revision)
+                saved = true
+            }
+        }
+        return saved
     }
 
     private fun decodeProfile(encoded: String?): UserProfile? = encoded?.let { jsonStr ->

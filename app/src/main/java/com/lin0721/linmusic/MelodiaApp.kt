@@ -176,6 +176,7 @@ fun MelodiaApp() {
                     onNavigateToRecentPlay = { navigation.openRecentPlay() },
                     onNavigateToListenData = { navigation.openListenData() },
                     onNavigateToCloud = { navigation.openCloud() },
+                    onViewProfile = { sidebar.close(); navigation.openAccount() },
                     onNavigateToSettings = { navigation.navigateTo(Screen.Settings) }
                 )
             }

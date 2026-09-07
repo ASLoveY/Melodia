@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.di
 
+import com.lin0721.linmusic.feature.account.ui.AccountViewModel
+
 import com.lin0721.linmusic.feature.settings.ui.SettingsViewModel
 import com.lin0721.linmusic.feature.create.ui.CreateViewModel
 import com.lin0721.linmusic.feature.home.ui.HomeViewModel
@@ -26,6 +28,7 @@ import org.koin.dsl.module
  * 使用 [viewModelOf] 委托自动解析 ViewModel 的构造参数。
  */
 val viewModelModule = module {
+    viewModelOf(::AccountViewModel)
 
     viewModelOf(::HomeViewModel)
     viewModelOf(::MusicViewModel)

@@ -30,7 +30,7 @@ interface SettingsApi {
     ): UserBindingResponse
 
     // 修改用户个人资料
-    @POST("/eapi/user/update")
+    @POST("/weapi/user/profile/update")
     suspend fun updateUserProfile(
         @Body body: UserProfileUpdateRequest
     ): UserProfileUpdateResponse

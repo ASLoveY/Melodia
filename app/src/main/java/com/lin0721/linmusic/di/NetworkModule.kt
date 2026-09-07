@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.di
 
+import com.lin0721.linmusic.feature.account.data.ProfileApi
+
 import com.lin0721.linmusic.core.api.NeteaseApiService
 import com.lin0721.linmusic.core.network.CryptoInterceptor
 import com.lin0721.linmusic.core.network.EmptyBodyInterceptor
@@ -160,6 +162,7 @@ val networkModule = module {
     single<UserPlaylistApi> { get<Retrofit>().create(UserPlaylistApi::class.java) }
     single<UserArtistApi> { get<Retrofit>().create(UserArtistApi::class.java) }
     single<SettingsApi> { get<Retrofit>().create(SettingsApi::class.java) }
+    single<ProfileApi> { get<Retrofit>().create(ProfileApi::class.java) }
 }
 
 object NetworkConfig {

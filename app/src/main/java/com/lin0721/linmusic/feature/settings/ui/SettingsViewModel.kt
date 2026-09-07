@@ -280,37 +280,6 @@ class SettingsViewModel(
         }
     }
 
-    // 保存资料修改 (修改昵称及个性签名)
-    fun saveProfileChanges(nickname: String, signature: String, onFinished: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            settingsRepository.updateUserProfile(
-                nickname = nickname,
-                gender = 1,
-                birthday = 0L,
-                province = 110000,
-                city = 110101,
-                signature = signature
-            ).collect { res ->
-                res.onSuccess {
-                    // 更新本地 user profile nickname
-                    val currentProfile = userPreferences.userProfile.first()
-                    if (currentProfile != null) {
-                        userPreferences.saveUserProfile(
-                            currentProfile.copy(nickname = nickname)
-                        )
-                    }
-                    _toastEvent.emit("资料保存成功")
-                    onFinished(true)
-                }.onFailure {
-                    _toastEvent.emit(it.toUserMessage(resourceProvider))
-                    onFinished(false)
-                }
-                _isLoading.value = false
-            }
-        }
-    }
-
     // 退出登录，注销远端会话并清空本地 preferences 缓存
     fun executeLogout(onFinished: () -> Unit) {
         viewModelScope.launch {

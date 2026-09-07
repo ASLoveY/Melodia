@@ -19,4 +19,18 @@
     <string name="playlist_unsubscribe_confirmation">将「%1$s」移出收藏，原歌单会保留。</string>
     <string name="action_cancel">取消</string>
     <string name="action_retry">重试</string>
+    <string name="profile_title">个人资料</string>
+    <string name="profile_login_required">请先登录后查看个人资料</string>
+    <string name="profile_nickname">昵称</string>
+    <string name="profile_signature">个性签名</string>
+    <string name="profile_avatar">个人头像</string>
+    <string name="profile_user_id">网易云 ID：%1$d</string>
+    <string name="profile_incomplete">资料加载不完整，请刷新后再保存</string>
+    <string name="profile_save">保存资料</string>
+    <string name="profile_saving">正在保存</string>
+    <string name="profile_saved">资料已保存</string>
+    <string name="profile_discard_title">放弃未保存的修改？</string>
+    <string name="profile_discard_message">返回后，本次未保存的昵称和签名修改会被清除。</string>
+    <string name="profile_discard">放弃修改</string>
+    <string name="profile_continue_editing">继续编辑</string>
 </resources>

@@ -1,5 +1,8 @@
 package com.lin0721.linmusic.di
 
+import com.lin0721.linmusic.feature.account.data.ProfileRepository
+import com.lin0721.linmusic.feature.account.data.ProfileRepositoryImpl
+
 import com.lin0721.linmusic.core.auth.AuthRepository
 import com.lin0721.linmusic.core.auth.AuthRepositoryImpl
 import com.lin0721.linmusic.core.auth.SyncProfileAfterLoginUseCase
@@ -54,6 +57,7 @@ import org.koin.dsl.module
  * Koin 数据仓库层依赖注入模块
  */
 val repositoryModule = module {
+    single<ProfileRepository> { ProfileRepositoryImpl(get()) }
 
     // 登录态与账号信息（core/auth，跨业务域共享）
     singleOf(::AuthRepositoryImpl) { bind<AuthRepository>() }

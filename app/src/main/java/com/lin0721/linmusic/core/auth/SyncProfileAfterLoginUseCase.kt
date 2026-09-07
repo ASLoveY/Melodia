@@ -34,7 +34,8 @@ class SyncProfileAfterLoginUseCase(
             val profile = UserProfile(
                 uid = remoteProfile.userId,
                 nickname = remoteProfile.nickname,
-                avatarUrl = remoteProfile.avatarUrl
+                avatarUrl = remoteProfile.avatarUrl,
+                signature = remoteProfile.signature
             )
 
             // DataStore 内以 Cookie + revision 原子核对，旧请求不能写入新会话。

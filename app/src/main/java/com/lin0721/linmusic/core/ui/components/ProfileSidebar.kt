@@ -45,6 +45,7 @@ fun ProfileSidebar(
     onNavigateToRecentPlay: () -> Unit,
     onNavigateToListenData: () -> Unit,
     onNavigateToCloud: () -> Unit,
+    onViewProfile: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     Column(
@@ -58,6 +59,7 @@ fun ProfileSidebar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .pressable(MelodiaPress.Row, onClick = onViewProfile)
                 .padding(horizontal = 20.dp, vertical = MelodiaSpacing.lg),
             verticalAlignment = Alignment.CenterVertically
         ) {
