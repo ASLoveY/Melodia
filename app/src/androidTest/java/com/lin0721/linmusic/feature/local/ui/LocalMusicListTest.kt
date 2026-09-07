@@ -13,7 +13,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.lin0721.linmusic.feature.local.domain.LocalTrack
+import com.lin0721.linmusic.feature.local.domain.LocalImportProgress
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertSame
 import org.junit.Rule
 import org.junit.Test
@@ -66,6 +69,7 @@ class LocalMusicListTest {
 
     @Test
     fun localMusicImportButtonDisabledWhileImporting() {
+        var cancelRequested = false
         composeRule.setContent {
             MaterialTheme {
                 LocalMusicList(
@@ -74,12 +78,15 @@ class LocalMusicListTest {
                     query = "",
                     sort = LocalMusicSort.RECENT,
                     importing = true,
+                    importProgress = LocalImportProgress(scanned = 3, imported = 1, skippedShort = 1),
                     error = null,
                     playingId = null,
                     isPlaying = false,
                     onQuery = {},
                     onSort = {},
                     onImport = {},
+                    onImportDirectory = {},
+                    onCancelImport = { cancelRequested = true },
                     onPlay = {},
                     onRemove = {}
                 )
@@ -87,6 +94,73 @@ class LocalMusicListTest {
         }
 
         composeRule.onNodeWithTag("local_import").assertIsNotEnabled()
+        composeRule.onNodeWithTag("local_import_directory").assertIsNotEnabled()
+        composeRule.onNodeWithTag("local_import_cancel").performClick()
+        composeRule.runOnIdle { assertTrue(cancelRequested) }
+    }
+
+    @Test
+    fun localMusicSavingStageDisablesCancellation() {
+        var cancelRequested = false
+        composeRule.setContent {
+            MaterialTheme {
+                LocalMusicList(
+                    tracks = emptyList(),
+                    totalCount = 0,
+                    query = "",
+                    sort = LocalMusicSort.RECENT,
+                    importing = true,
+                    importProgress = LocalImportProgress(
+                        scanned = 3,
+                        imported = 2,
+                        skippedShort = 1,
+                        isSaving = true
+                    ),
+                    error = null,
+                    playingId = null,
+                    isPlaying = false,
+                    onQuery = {},
+                    onSort = {},
+                    onImport = {},
+                    onImportDirectory = {},
+                    onCancelImport = { cancelRequested = true },
+                    onPlay = {},
+                    onRemove = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("local_import_cancel").assertIsNotEnabled()
+        composeRule.runOnIdle { assertFalse(cancelRequested) }
+    }
+
+    @Test
+    fun localMusicDirectoryImportCallback() {
+        var requested = false
+        composeRule.setContent {
+            MaterialTheme {
+                LocalMusicList(
+                    tracks = emptyList(),
+                    totalCount = 0,
+                    query = "",
+                    sort = LocalMusicSort.RECENT,
+                    importing = false,
+                    error = null,
+                    playingId = null,
+                    isPlaying = false,
+                    onQuery = {},
+                    onSort = {},
+                    onImport = {},
+                    onImportDirectory = { requested = true },
+                    onCancelImport = {},
+                    onPlay = {},
+                    onRemove = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("local_import_directory").performClick()
+        composeRule.runOnIdle { assertEquals(true, requested) }
     }
 
     private fun track(

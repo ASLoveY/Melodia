@@ -4,11 +4,14 @@ import android.content.Context
 import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.lin0721.linmusic.feature.local.domain.LocalImportResult
+import com.lin0721.linmusic.feature.local.domain.LocalImportProgress
 import com.lin0721.linmusic.feature.local.domain.LocalMusicCatalog
 import com.lin0721.linmusic.feature.local.domain.LocalMusicRepository
 import com.lin0721.linmusic.feature.local.domain.LocalTrack
@@ -35,6 +38,13 @@ private const val UNKNOWN_TITLE = "未知歌曲"
 
 private val Context.localMusicDataStore by preferencesDataStore(name = DATASTORE_NAME)
 
+/** A document has the same identity whether selected alone or through a directory grant. */
+internal fun localDocumentKey(uri: Uri): String = runCatching {
+    if (uri.scheme == "content" && "document" in uri.pathSegments) {
+        DocumentsContract.buildDocumentUri(requireNotNull(uri.authority), DocumentsContract.getDocumentId(uri)).toString()
+    } else uri.toString()
+}.getOrDefault(uri.toString())
+
 /**
  * URI-backed local music catalog. The repository never copies, renames, or deletes source files.
  */
@@ -58,9 +68,88 @@ class LocalMusicRepositoryImpl(
     override suspend fun importUris(uris: List<Uri>): LocalImportResult =
         withContext(ioDispatcher) {
             catalogMutex.withLock {
-                importUrisLocked(uris)
+                val batch = ImportBatch(tracks.first())
+                for (uri in uris) {
+                    currentCoroutineContext().ensureActive()
+                    try {
+                        context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        batch.add(uri)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        batch.failed++
+                    }
+                }
+                batch.commit()
+                batch.result()
             }
         }
+
+    override suspend fun importDirectory(
+        uri: Uri,
+        minDurationMs: Long,
+        onProgress: (LocalImportProgress) -> Unit
+    ): LocalImportResult = withContext(ioDispatcher) {
+        require(minDurationMs >= 0L)
+        require(DocumentsContract.isTreeUri(uri)) { "请选择音乐所在的目录" }
+        catalogMutex.withLock {
+            // One persisted tree grant covers all descendants; individual child grants are
+            // neither necessary nor issued by ACTION_OPEN_DOCUMENT_TREE.
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val rootId = DocumentsContract.getTreeDocumentId(uri)
+            val rootChildren = listChildren(uri, rootId)
+            val batch = ImportBatch(tracks.first())
+            var scanned = 0
+            onProgress(LocalImportProgress(0, 0, 0))
+            val summary = scanAudioDocuments(
+                rootId = rootId,
+                listChildren = { if (it == rootId) rootChildren else listChildren(uri, it) },
+                onAudio = { document ->
+                    currentCoroutineContext().ensureActive()
+                    scanned++
+                    try {
+                        batch.add(
+                            DocumentsContract.buildDocumentUriUsingTree(uri, document.id),
+                            document.name,
+                            minDurationMs
+                        )
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        batch.failed++
+                    }
+                    onProgress(LocalImportProgress(scanned, batch.imported, batch.skippedShort))
+                }
+            )
+            batch.failed += summary.failedDirectories
+            currentCoroutineContext().ensureActive()
+            onProgress(LocalImportProgress(scanned, batch.imported, batch.skippedShort, isSaving = true))
+            batch.commit()
+            batch.result()
+        }
+    }
+
+    private suspend fun listChildren(treeUri: Uri, parentId: String): List<LocalDocument> {
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE
+        )
+        val cursor = context.contentResolver.query(childrenUri, projection, null, null, null)
+            ?: throw IOException("无法读取目录")
+        return cursor.use {
+            val idIndex = it.getColumnIndexOrThrow(projection[0])
+            val nameIndex = it.getColumnIndexOrThrow(projection[1])
+            val mimeIndex = it.getColumnIndexOrThrow(projection[2])
+            buildList {
+                while (it.moveToNext()) {
+                    currentCoroutineContext().ensureActive()
+                    add(LocalDocument(it.getString(idIndex), it.getString(nameIndex).orEmpty(), it.getString(mimeIndex).orEmpty()))
+                }
+            }
+        }
+    }
 
     override suspend fun remove(id: String) {
         withContext(ioDispatcher) {
@@ -77,74 +166,70 @@ class LocalMusicRepositoryImpl(
         }
     }
 
-    private suspend fun importUrisLocked(uris: List<Uri>): LocalImportResult {
-        if (uris.isEmpty()) return LocalImportResult(imported = 0, duplicates = 0, failed = 0)
-
-        val existing = tracks.first()
-        val existingUris = existing.mapTo(HashSet(existing.size)) { it.uri }
-        val acceptedUris = HashSet<String>(uris.size)
-        val importedTracks = ArrayList<LocalTrack>(uris.size)
+    /** Stage a complete import under catalogMutex, so cancellation never commits a partial scan. */
+    private inner class ImportBatch(existing: List<LocalTrack>) {
+        private val staged = existing.toMutableList()
+        private val indices = HashMap<String, Int>().apply {
+            existing.forEachIndexed { index, track -> putIfAbsent(localDocumentKey(track.uri.toUri()), index) }
+        }
+        private var changed = false
+        var imported = 0
+            private set
         var duplicates = 0
+            private set
+        var skippedShort = 0
+            private set
         var failed = 0
 
-        for (uri in uris) {
-            currentCoroutineContext().ensureActive()
-            val uriString = uri.toString()
-            if (uriString.isBlank()) {
-                failed++
-                continue
-            }
-            try {
-                // ACTION_OPEN_DOCUMENT grants this persistable permission. If the provider does
-                // not support it, do not add or count a record that cannot be reopened.
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-                verifyReadable(uri)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                // A failed URI is not kept in the catalog and can be retried in the same batch.
-                failed++
-                continue
-            }
-
-            // Authorization/readability is checked before this branch so re-selecting an
-            // existing URI can repair a revoked persisted grant before being counted duplicate.
-            if (!acceptedUris.add(uriString) || existingUris.contains(uriString)) {
+        fun add(uri: Uri, displayName: String? = null, minDurationMs: Long? = null) {
+            verifyReadable(uri)
+            val key = localDocumentKey(uri)
+            val index = indices[key]
+            if (index != null) {
+                // Keep the record's stable id. Repair its access URI only if the old grant no
+                // longer works (e.g. importing the same document through a newly granted tree).
+                val oldTrack = staged[index]
+                if (oldTrack.uri != uri.toString() && runCatching { verifyReadable(oldTrack.uri.toUri()) }.isFailure) {
+                    staged[index] = oldTrack.copy(uri = uri.toString())
+                    changed = true
+                }
                 duplicates++
-                continue
+                return
             }
-
             val metadata = readMetadata(uri)
-            val fileName = queryDisplayName(uri)
-            importedTracks += LocalTrack(
+            if (minDurationMs != null) {
+                val duration = metadata.durationMs ?: throw IOException("无法识别音频时长")
+                if (duration < minDurationMs) {
+                    skippedShort++
+                    return
+                }
+            }
+            val uriString = uri.toString()
+            indices[key] = staged.size
+            staged += LocalTrack(
                 id = uriString,
                 uri = uriString,
-                title = metadata.title ?: fileName,
+                title = metadata.title ?: displayName?.takeIf { it.isNotBlank() } ?: queryDisplayName(uri),
                 artist = metadata.artist ?: UNKNOWN_ARTIST,
                 album = metadata.album ?: UNKNOWN_ALBUM,
                 durationMs = metadata.durationMs ?: 0L,
                 addedAt = now()
             )
+            imported++
+            changed = true
         }
 
-        currentCoroutineContext().ensureActive()
-        if (importedTracks.isNotEmpty()) {
+        suspend fun commit() {
             currentCoroutineContext().ensureActive()
-            context.localMusicDataStore.edit { prefs ->
-                val current = decode(prefs[KEY_TRACKS])
-                val merged = LocalMusicCatalog.merge(current, importedTracks)
-                prefs[KEY_TRACKS] = json.encodeToString(merged)
+            if (changed) {
+                context.localMusicDataStore.edit { prefs ->
+                    currentCoroutineContext().ensureActive()
+                    prefs[KEY_TRACKS] = json.encodeToString(staged)
+                }
             }
         }
 
-        return LocalImportResult(
-            imported = importedTracks.size,
-            duplicates = duplicates,
-            failed = failed
-        )
+        fun result() = LocalImportResult(imported, duplicates, failed, skippedShort)
     }
 
     private fun verifyReadable(uri: Uri) {

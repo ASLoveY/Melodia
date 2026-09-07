@@ -26,6 +26,7 @@ import com.lin0721.linmusic.core.ui.components.MelodiaButton
 import com.lin0721.linmusic.core.ui.components.MelodiaIconButton
 import com.lin0721.linmusic.core.ui.components.MelodiaTextButton
 import com.lin0721.linmusic.core.ui.components.ToastManager
+import com.lin0721.linmusic.feature.local.domain.LocalImportProgress
 import com.lin0721.linmusic.feature.local.domain.LocalTrack
 import org.koin.androidx.compose.koinViewModel
 
@@ -37,12 +38,16 @@ fun LocalMusicContent(modifier: Modifier = Modifier) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val sort by viewModel.sort.collectAsStateWithLifecycle()
     val importing by viewModel.isImporting.collectAsStateWithLifecycle()
+    val importProgress by viewModel.importProgress.collectAsStateWithLifecycle()
     val removing by viewModel.isRemoving.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
     val current by viewModel.currentTrack.collectAsStateWithLifecycle()
     val playing by viewModel.isPlaying.collectAsStateWithLifecycle()
     var pendingRemoval by remember { mutableStateOf<LocalTrack?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments(), viewModel::importUris)
+    val directoryPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let(viewModel::importDirectory)
+    }
     LaunchedEffect(viewModel) { viewModel.messages.collect { ToastManager.showToast(it) } }
 
     LocalMusicList(
@@ -51,12 +56,15 @@ fun LocalMusicContent(modifier: Modifier = Modifier) {
         query = query,
         sort = sort,
         importing = importing,
+        importProgress = importProgress,
         error = error,
         playingId = current?.mediaId,
         isPlaying = playing,
         onQuery = viewModel::setQuery,
         onSort = viewModel::setSort,
         onImport = { picker.launch(arrayOf("audio/*")) },
+        onImportDirectory = { directoryPicker.launch(null) },
+        onCancelImport = viewModel::cancelImport,
         onPlay = viewModel::play,
         onRemove = { if (!importing) pendingRemoval = it },
         modifier = modifier
@@ -95,7 +103,10 @@ fun LocalMusicList(
     onImport: () -> Unit,
     onPlay: (LocalTrack) -> Unit,
     onRemove: (LocalTrack) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    importProgress: LocalImportProgress? = null,
+    onImportDirectory: () -> Unit = {},
+    onCancelImport: () -> Unit = {}
 ) {
     var showSort by remember { mutableStateOf(false) }
     Column(modifier.fillMaxSize()) {
@@ -122,10 +133,32 @@ fun LocalMusicList(
                     }
                 }
             }
-            MelodiaButton(onClick = onImport, enabled = !importing, modifier = Modifier.testTag("local_import")) {
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MelodiaButton(
+                onClick = onImport,
+                enabled = !importing,
+                modifier = Modifier.weight(1f).testTag("local_import")
+            ) {
                 Text(stringResource(if (importing) R.string.local_importing else R.string.local_import))
             }
+            MelodiaButton(
+                onClick = onImportDirectory,
+                enabled = !importing,
+                modifier = Modifier.weight(1f).testTag("local_import_directory")
+            ) {
+                Text(stringResource(R.string.local_import_directory))
+            }
         }
+        Text(
+            stringResource(R.string.local_import_directory_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        )
         OutlinedTextField(
             value = query,
             onValueChange = onQuery,
@@ -134,7 +167,37 @@ fun LocalMusicList(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("local_search")
         )
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
-        if (importing) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (importing) {
+            val progress = importProgress
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        when {
+                            progress?.isSaving == true -> stringResource(R.string.local_import_saving)
+                            progress != null -> stringResource(
+                                R.string.local_import_directory_progress,
+                                progress.scanned,
+                                progress.imported,
+                                progress.skippedShort
+                            )
+                            else -> stringResource(R.string.local_importing)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (progress != null) {
+                        MelodiaTextButton(
+                            onClick = onCancelImport,
+                            enabled = !progress.isSaving,
+                            modifier = Modifier.testTag("local_import_cancel")
+                        ) {
+                            Text(stringResource(R.string.action_cancel))
+                        }
+                    }
+                }
+            }
+        }
         if (tracks.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                 Text(stringResource(if (query.isBlank()) R.string.local_empty else R.string.local_no_results))

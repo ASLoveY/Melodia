@@ -2,6 +2,15 @@ package com.lin0721.linmusic.feature.local.domain
 
 import kotlinx.serialization.Serializable
 
+const val LOCAL_MUSIC_MIN_DURATION_MS = 30_000L
+
+data class LocalImportProgress(
+    val scanned: Int,
+    val imported: Int,
+    val skippedShort: Int,
+    val isSaving: Boolean = false
+)
+
 @Serializable
 data class LocalTrack(
     val id: String,
@@ -16,7 +25,8 @@ data class LocalTrack(
 data class LocalImportResult(
     val imported: Int,
     val duplicates: Int,
-    val failed: Int
+    val failed: Int,
+    val skippedShort: Int = 0
 )
 
 /** Pure catalog operations shared by persistence and unit tests. */

@@ -8,5 +8,11 @@ interface LocalMusicRepository {
 
     suspend fun importUris(uris: List<Uri>): LocalImportResult
 
+    suspend fun importDirectory(
+        uri: Uri,
+        minDurationMs: Long = LOCAL_MUSIC_MIN_DURATION_MS,
+        onProgress: (LocalImportProgress) -> Unit = {}
+    ): LocalImportResult
+
     suspend fun remove(id: String)
 }

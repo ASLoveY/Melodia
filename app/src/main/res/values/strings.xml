@@ -38,8 +38,14 @@
     <string name="local_track_count">%1$d 首歌曲</string>
     <string name="local_import">导入音乐</string>
     <string name="local_importing">正在导入</string>
-    <string name="local_import_result">已导入 %1$d 首，重复 %2$d 首，失败 %3$d 首</string>
+    <string name="local_import_result">已导入 %1$d 首，重复 %2$d 首，失败 %3$d 项，忽略短音频 %4$d 首</string>
     <string name="local_import_failed">导入未完成，请重新选择音频文件</string>
+    <string name="local_import_directory_failed">目录扫描未完成，请重新选择目录后重试</string>
+    <string name="local_import_cancelled">目录导入已取消，未完成的导入不会加入音乐库</string>
+    <string name="local_import_saving">正在保存导入结果，暂时不能取消</string>
+    <string name="local_import_directory">导入目录</string>
+    <string name="local_import_directory_description">选择目录后会递归扫描其中的音频文件，时长不足 30 秒的歌曲会自动忽略。</string>
+    <string name="local_import_directory_progress">已扫描 %1$d 个文件，待导入 %2$d 首，忽略短音频 %3$d 首</string>
     <string name="local_load_failed">读取本地音乐库失败，请重新打开后重试</string>
     <string name="local_search">搜索本地歌曲、歌手或专辑</string>
     <string name="local_empty">选择设备上的音频文件，离线也能播放</string>
