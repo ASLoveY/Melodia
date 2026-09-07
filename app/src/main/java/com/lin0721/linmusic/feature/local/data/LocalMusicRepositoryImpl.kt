@@ -133,6 +133,22 @@ class LocalMusicRepositoryImpl(
             }
         }
 
+    override suspend fun registerDownload(uri: Uri, song: com.lin0721.linmusic.core.model.Track) =
+        withContext(ioDispatcher) {
+            catalogMutex.withLock {
+                verifyReadable(uri)
+                val duration = readMetadata(uri).durationMs?.takeIf { it > 0 }
+                    ?: throw IOException("下载的文件不是有效音频")
+                val snapshot = readSnapshot()
+                val track = LocalTrack(
+                    id = uri.toString(), uri = uri.toString(), title = song.name,
+                    artist = song.ar.joinToString(" / ") { it.name }.ifBlank { UNKNOWN_ARTIST },
+                    album = song.al.name.ifBlank { UNKNOWN_ALBUM }, durationMs = duration, addedAt = now()
+                )
+                persistSnapshot(snapshot.tracks.filterNot { it.uri == track.uri } + track, snapshot.directories)
+            }
+        }
+
     override suspend fun importDirectory(
         uri: Uri,
         minDurationMs: Long,

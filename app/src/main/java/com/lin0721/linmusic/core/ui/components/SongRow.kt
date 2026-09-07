@@ -9,6 +9,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,6 +79,7 @@ fun SongRow(
     index: Int? = null,
     onClick: () -> Unit,
     onArtistClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     trailingSlot: @Composable RowScope.() -> Unit = {}
 ) {
     val coverSize = if (compact) 42.dp else 48.dp
@@ -90,7 +92,7 @@ fun SongRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = "歌曲选项")
             .padding(horizontal = MelodiaSpacing.md, vertical = verticalPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {

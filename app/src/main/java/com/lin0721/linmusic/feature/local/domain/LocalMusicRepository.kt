@@ -10,6 +10,9 @@ interface LocalMusicRepository {
 
     suspend fun importUris(uris: List<Uri>): LocalImportResult
 
+    /** Registers a completed app-owned download; no SAF grant is required. */
+    suspend fun registerDownload(uri: Uri, song: com.lin0721.linmusic.core.model.Track)
+
     suspend fun importDirectory(
         uri: Uri,
         minDurationMs: Long = LOCAL_MUSIC_MIN_DURATION_MS,

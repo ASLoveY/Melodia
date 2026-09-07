@@ -57,6 +57,9 @@ import kotlinx.coroutines.launch
  * - core 共享 Api          ： CommentApi/SongLikeApi/PlaybackApi/UserPlaylistApi/UserArtistApi
  */
 val networkModule = module {
+    single<com.lin0721.linmusic.feature.search.data.SearchSongActionsApi> {
+        get<Retrofit>().create(com.lin0721.linmusic.feature.search.data.SearchSongActionsApi::class.java)
+    }
 
     // ─── kotlinx.serialization Json 实例 ───
     single {

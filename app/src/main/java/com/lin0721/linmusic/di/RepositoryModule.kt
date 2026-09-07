@@ -57,6 +57,7 @@ import org.koin.dsl.module
  * Koin 数据仓库层依赖注入模块
  */
 val repositoryModule = module {
+    single { com.lin0721.linmusic.feature.search.data.SongDownloadRepository(get(), get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
 
     // 登录态与账号信息（core/auth，跨业务域共享）

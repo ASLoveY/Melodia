@@ -116,6 +116,9 @@ fun SearchScreen(
     val isPlaying by viewModel.playerManager.isPlaying.collectAsStateWithLifecycle()
     val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
+    var selectedSong by remember { mutableStateOf<Track?>(null) }
+    SearchSongActions(selectedSong, onDismiss = { selectedSong = null }, onArtist = onArtistClick,
+        onAlbum = { onPlaylistClick(it, true) })
 
     // 每个 Tab 各自持有滚动位置，切换 Tab 时不丢失浏览进度
     val resultListStates = remember { SearchType.entries.associateWith { LazyListState() } }
@@ -312,6 +315,7 @@ fun SearchScreen(
                                 currentTrackId = currentTrack?.mediaId,
                                 isPlaying = isPlaying,
                                 onSongClick = { viewModel.playSong(it) },
+                                onSongLongClick = { focusManager.clearFocus(); selectedSong = it },
                                 onAlbumClick = { id -> onPlaylistClick(id, true) },
                                 onArtistClick = onArtistClick,
                                 onPlaylistClick = { id -> onPlaylistClick(id, false) },
@@ -434,6 +438,7 @@ private fun SearchResultsList(
     currentTrackId: String?,
     isPlaying: Boolean,
     onSongClick: (Track) -> Unit,
+    onSongLongClick: (Track) -> Unit,
     onAlbumClick: (Long) -> Unit,
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
@@ -504,7 +509,13 @@ private fun SearchResultsList(
                                 ),
                                 isActive = isActive,
                                 isPlaying = isPlaying,
-                                onClick = { onSongClick(track) }
+                                onClick = { onSongClick(track) },
+                                onLongClick = { onSongLongClick(track) },
+                                trailingSlot = {
+                                    IconButton(onClick = { onSongLongClick(track) }) {
+                                        Icon(Icons.Rounded.MoreVert, contentDescription = "歌曲选项：${track.name}")
+                                    }
+                                }
                             )
                         }
                         is SearchResultItem.AlbumItem -> EntityRow(

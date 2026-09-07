@@ -211,6 +211,19 @@ class PlayerManager(
         saveQueueState()
     }
 
+    /** Adding a search result never starts or interrupts playback, including an empty queue. */
+    fun enqueue(item: QueueItem, next: Boolean = false) {
+        if (playbackQueue.isEmpty) {
+            playbackQueue.replaceAll(listOf(item), 0)
+            playbackQueue.setPlayContext("播放队列")
+            _currentTrack.value = item.toMediaItem("", "播放队列")
+            saveQueueState()
+            return
+        }
+        if (next) playbackQueue.insertNext(listOf(item)) else playbackQueue.append(listOf(item))
+        saveQueueState()
+    }
+
     fun playNext() {
         if (playbackQueue.isEmpty) return
         consecutiveErrors = 0

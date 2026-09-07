@@ -133,6 +133,14 @@ class PlaybackQueue {
         _items.value = playItems
     }
 
+    /** Append without changing the current song or the shuffle restoration order. */
+    fun append(items: List<QueueItem>) {
+        if (items.isEmpty()) return
+        originalItems = originalItems + items
+        playItems = playItems + items
+        _items.value = playItems
+    }
+
     // 移除指定项，返回需要重新起播的下标，无需重播时返回 -1
     fun removeAt(index: Int): Int {
         if (index < 0 || index >= playItems.size || playItems.size <= 1) return -1
