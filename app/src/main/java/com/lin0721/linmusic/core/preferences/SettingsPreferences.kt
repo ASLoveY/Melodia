@@ -122,10 +122,11 @@ class SettingsPreferences(private val context: Context) {
 
     // 音频缓存最大容量设置 Flow
     val audioCacheMaxSize: Flow<Long> = context.settingsDataStore.data.map { prefs ->
-        prefs[KEY_AUDIO_CACHE_MAX_SIZE] ?: (512 * 1024 * 1024L) // 默认 512MB
+        prefs[KEY_AUDIO_CACHE_MAX_SIZE]?.takeIf { it > 0 } ?: (512 * 1024 * 1024L) // 默认 512MB
     }
 
     suspend fun saveAudioCacheMaxSize(size: Long) {
+        require(size > 0)
         context.settingsDataStore.edit { prefs ->
             prefs[KEY_AUDIO_CACHE_MAX_SIZE] = size
         }

@@ -28,6 +28,9 @@ jobs:
       - name: 配置 Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: 单元测试与 Android Lint
+        run: ./gradlew testDebugUnitTest lintDebug --no-daemon
+
       - name: 从 tag 解析版本号
         id: version
         run: |
@@ -116,6 +119,17 @@ jobs:
       - name: 清理 keystore
         if: always()
         run: rm -f melodia-release.jks
+
+      - name: 保存测试报告与混淆映射
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-validation
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.*
+            app/build/outputs/mapping/release/mapping.txt
+          retention-days: 30
 
       # 按 commit message 的 conventional commits 前缀（feat/fix/refactor...）自己分类生成
       - name: 生成分类日志

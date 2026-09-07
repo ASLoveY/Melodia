@@ -3,6 +3,7 @@ package com.lin0721.linmusic.di
 import com.lin0721.linmusic.core.auth.AuthRepository
 import com.lin0721.linmusic.core.auth.AuthRepositoryImpl
 import com.lin0721.linmusic.core.auth.SyncProfileAfterLoginUseCase
+import com.lin0721.linmusic.core.auth.UserPreferences
 import com.lin0721.linmusic.core.songlike.LoadLikedSongIdsUseCase
 import com.lin0721.linmusic.feature.create.data.CreateRepository
 import com.lin0721.linmusic.feature.create.data.CreateRepositoryImpl
@@ -117,7 +118,7 @@ val repositoryModule = module {
     factoryOf(::SongCollectDelegate)
 
     // 登录成功后同步账号资料（跨 home/library/artist/playlist 域共用）
-    singleOf(::SyncProfileAfterLoginUseCase)
+    single { SyncProfileAfterLoginUseCase(get<UserPreferences>(), get()) }
 
     // 拉取已红心歌曲 ID（跨 artist/player/playlist 域共用）
     singleOf(::LoadLikedSongIdsUseCase)

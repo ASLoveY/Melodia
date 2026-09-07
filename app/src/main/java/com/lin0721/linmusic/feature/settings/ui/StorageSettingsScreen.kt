@@ -11,11 +11,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lin0721.linmusic.core.ui.components.MelodiaTextButton
 import com.lin0721.linmusic.LocalBottomOverlayInset
+import com.lin0721.linmusic.R
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
 import com.lin0721.linmusic.core.ui.theme.SurfaceDark
 import com.lin0721.linmusic.core.ui.theme.TextGray
@@ -23,7 +25,7 @@ import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 
 @Composable
 fun StorageSettingsView(viewModel: SettingsViewModel, context: Context) {
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isCacheOperationRunning.collectAsStateWithLifecycle()
     val currentMaxSize by viewModel.audioCacheMaxSize.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
 
@@ -46,14 +48,14 @@ fun StorageSettingsView(viewModel: SettingsViewModel, context: Context) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { viewModel.clearApplicationCache(context) }
+                            .clickable(enabled = !isLoading) { viewModel.clearApplicationCache(context) }
                             .padding(vertical = 14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("清理应用缓存", color = Color.White, fontSize = 15.sp)
-                            Text("深度清理图片缓存、播放器缓冲和临时数据文件", color = TextGray, fontSize = 12.sp)
+                            Text(stringResource(R.string.cache_clear_description), color = TextGray, fontSize = 12.sp)
                         }
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
@@ -68,7 +70,7 @@ fun StorageSettingsView(viewModel: SettingsViewModel, context: Context) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showDialog = true }
+                            .clickable(enabled = !isLoading) { showDialog = true }
                             .padding(vertical = 14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically

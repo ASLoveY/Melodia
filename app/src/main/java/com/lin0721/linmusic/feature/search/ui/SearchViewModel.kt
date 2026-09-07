@@ -53,17 +53,21 @@ class SearchViewModel(
     private val _selectedType = MutableStateFlow(SearchType.SONG)
     val selectedType: StateFlow<SearchType> = _selectedType.asStateFlow()
 
-    private val _resultsByType: Map<SearchType, MutableStateFlow<SearchResultsUiState>> =
-        SearchType.entries.associateWith { MutableStateFlow(SearchResultsUiState.Idle) }
-    val resultsByType: Map<SearchType, StateFlow<SearchResultsUiState>> = _resultsByType
-
     private val _toastEvent = MutableSharedFlow<String>()
     val toastEvent: SharedFlow<String> = _toastEvent.asSharedFlow()
 
-    // 各 Tab 独立维护的分页 offset，按接口原始返回条数推进（见 SearchPageResult.rawFetchedCount 注释）
-    private val offsetByType = mutableMapOf<SearchType, Int>()
-    private var searchJob: Job? = null
+    private val resultsCoordinator = SearchResultsCoordinator(
+        repository = repository,
+        scope = viewModelScope,
+        errorMessage = { it.toUserMessage(resourceProvider) },
+        onToast = { _toastEvent.emit(it) }
+    )
+    val resultsByType: Map<SearchType, StateFlow<SearchResultsUiState>> = resultsCoordinator.resultsByType
+
+    // 输入防抖任务与联想词请求各自可取消；代数同时防止不可取消的 Repository 回调迟到覆盖新输入。
+    private var searchScheduleJob: Job? = null
     private var suggestJob: Job? = null
+    private var queryGeneration = 0L
 
     init {
         loadDiscoveryData()
@@ -110,8 +114,8 @@ class SearchViewModel(
         val type = _selectedType.value
         val keyword = _inputState.value.query
         if (keyword.isBlank()) return
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch { runSearch(keyword, type, isLoadMore = false) }
+        searchScheduleJob?.cancel()
+        resultsCoordinator.search(keyword, type, isLoadMore = false)
     }
 
     fun activateSearch() {
@@ -124,22 +128,27 @@ class SearchViewModel(
     }
 
     private fun resetSearchState() {
-        searchJob?.cancel()
+        queryGeneration += 1
+        searchScheduleJob?.cancel()
         suggestJob?.cancel()
+        searchScheduleJob = null
+        suggestJob = null
         _inputState.value = SearchInputState()
-        offsetByType.clear()
-        _resultsByType.values.forEach { it.value = SearchResultsUiState.Idle }
+        resultsCoordinator.clear()
     }
 
     fun updateQuery(newQuery: String) {
-        _inputState.value = _inputState.value.copy(query = newQuery)
-        searchJob?.cancel()
+        val generation = ++queryGeneration
+        searchScheduleJob?.cancel()
         suggestJob?.cancel()
+        searchScheduleJob = null
+        suggestJob = null
+
+        // “关键词 + 分类”共同决定结果；输入每次变化都让所有分类缓存立即失效，避免切 Tab 看到旧词结果。
+        resultsCoordinator.clear()
+        _inputState.value = SearchInputState(query = newQuery)
 
         if (newQuery.isBlank()) {
-            _inputState.value = _inputState.value.copy(isSuggesting = false, suggestions = emptyList())
-            offsetByType.clear()
-            _resultsByType.values.forEach { it.value = SearchResultsUiState.Idle }
             return
         }
 
@@ -147,14 +156,17 @@ class SearchViewModel(
         suggestJob = viewModelScope.launch {
             delay(300)
             repository.getSuggestions(newQuery).firstOrNull()?.onSuccess { suggestions ->
-                _inputState.value = _inputState.value.copy(suggestions = suggestions)
+                if (generation == queryGeneration && _inputState.value.query == newQuery) {
+                    _inputState.value = _inputState.value.copy(suggestions = suggestions)
+                }
             }
         }
 
-        searchJob = viewModelScope.launch {
+        searchScheduleJob = viewModelScope.launch {
             delay(400)
-            offsetByType.clear()
-            runSearch(newQuery, _selectedType.value, isLoadMore = false)
+            if (generation == queryGeneration && _inputState.value.query == newQuery) {
+                resultsCoordinator.search(newQuery, _selectedType.value, isLoadMore = false)
+            }
         }
     }
 
@@ -162,30 +174,26 @@ class SearchViewModel(
     // 热搜/精品歌单等入口是在发现页（isSearchActive 尚为 false）触发的，必须一并置为激活态，
     // 否则 query 已经写入但 UI 判断展示结果区的条件不满足，页面停留在发现页看起来像没反应
     fun searchWithKeyword(keyword: String) {
-        searchJob?.cancel()
+        queryGeneration += 1
+        searchScheduleJob?.cancel()
         suggestJob?.cancel()
+        searchScheduleJob = null
+        suggestJob = null
+        resultsCoordinator.clear()
         _isSearchActive.value = true
-        _inputState.value = _inputState.value.copy(query = keyword, isSuggesting = false, suggestions = emptyList())
+        _inputState.value = SearchInputState(query = keyword)
+        if (keyword.isBlank()) return
         viewModelScope.launch { historyPreferences.addKeyword(keyword) }
 
-        // 关键词已更换，其余 Tab 缓存的旧结果失效，切回时会重新拉取
-        _resultsByType.forEach { (type, state) ->
-            if (type != _selectedType.value) state.value = SearchResultsUiState.Idle
-        }
-        offsetByType.clear()
-
-        searchJob = viewModelScope.launch {
-            runSearch(keyword, _selectedType.value, isLoadMore = false)
-        }
+        resultsCoordinator.search(keyword, _selectedType.value, isLoadMore = false)
     }
 
     fun selectType(type: SearchType) {
         if (_selectedType.value == type) return
         _selectedType.value = type
         val query = _inputState.value.query
-        if (query.isNotBlank() && _resultsByType.getValue(type).value is SearchResultsUiState.Idle) {
-            searchJob?.cancel()
-            searchJob = viewModelScope.launch { runSearch(query, type, isLoadMore = false) }
+        if (query.isNotBlank() && resultsByType.getValue(type).value is SearchResultsUiState.Idle) {
+            resultsCoordinator.search(query, type, isLoadMore = false)
         }
     }
 
@@ -193,53 +201,7 @@ class SearchViewModel(
         val type = _selectedType.value
         val keyword = _inputState.value.query
         if (keyword.isBlank()) return
-        val current = _resultsByType.getValue(type).value
-        if (current !is SearchResultsUiState.Success || current.isLoadingMore || !current.hasMore) return
-
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch { runSearch(keyword, type, isLoadMore = true) }
-    }
-
-    private suspend fun runSearch(keyword: String, type: SearchType, isLoadMore: Boolean) {
-        val stateFlow = _resultsByType.getValue(type)
-        if (isLoadMore) {
-            val current = stateFlow.value
-            if (current !is SearchResultsUiState.Success || current.isLoadingMore || !current.hasMore) return
-            stateFlow.value = current.copy(isLoadingMore = true)
-        } else {
-            offsetByType[type] = 0
-            stateFlow.value = SearchResultsUiState.Loading
-        }
-
-        val offset = if (isLoadMore) offsetByType[type] ?: 0 else 0
-        repository.search(keyword, type, offset = offset).firstOrNull()?.let { result ->
-            result.onSuccess { page ->
-                offsetByType[type] = offset + page.rawFetchedCount
-                val mergedItems = if (isLoadMore) {
-                    (stateFlow.value as? SearchResultsUiState.Success)?.items.orEmpty() + page.items
-                } else {
-                    page.items
-                }
-                stateFlow.value = if (mergedItems.isEmpty()) {
-                    SearchResultsUiState.Empty
-                } else {
-                    SearchResultsUiState.Success(
-                        items = mergedItems,
-                        totalCount = page.totalCount,
-                        hasMore = page.hasMore,
-                        isLoadingMore = false
-                    )
-                }
-            }.onFailure { error ->
-                val current = stateFlow.value
-                if (isLoadMore && current is SearchResultsUiState.Success) {
-                    stateFlow.value = current.copy(isLoadingMore = false)
-                    _toastEvent.emit(error.toUserMessage(resourceProvider))
-                } else {
-                    stateFlow.value = SearchResultsUiState.Error(error.toUserMessage(resourceProvider))
-                }
-            }
-        }
+        resultsCoordinator.search(keyword, type, isLoadMore = true)
     }
 
     fun clearHistory() {
@@ -247,7 +209,7 @@ class SearchViewModel(
     }
 
     fun playSong(track: Track) {
-        val state = _resultsByType.getValue(SearchType.SONG).value
+        val state = resultsByType.getValue(SearchType.SONG).value
         if (state !is SearchResultsUiState.Success) return
         val tracks = state.items.filterIsInstance<SearchResultItem.SongItem>().map { it.track }
         val queueItems = tracks.map { t ->

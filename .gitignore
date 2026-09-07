@@ -25,6 +25,9 @@ local.properties
 
 # 签名密钥文件
 *.keystore
+*.p12
+*.pfx
+*.dpapi
 *.jks
 *.pepk
 *.b64

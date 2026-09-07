@@ -114,4 +114,56 @@ class MelodiaNavigationStateTest {
         assertEquals(Screen.Search, nav.currentScreen)
         assertFalse(nav.searchAutoFocus)
     }
+
+    @Test
+    fun `创建歌单登录成功后只消费一次待创建操作`() {
+        var state = CreateLoginFlowState().requestLogin().openWebLogin()
+
+        state = state.reportLoginSuccess()
+        assertEquals(CreateLoginSurface.Syncing, state.surface)
+        assertTrue(state.pendingCreate)
+        assertEquals(state, state.reportLoginSuccess())
+
+        val restored = state.consumePendingCreate()
+        assertFalse(restored.pendingCreate)
+        assertEquals(CreateLoginSurface.None, restored.surface)
+        assertEquals(restored, restored.consumePendingCreate())
+    }
+
+    @Test
+    fun `取消创建歌单登录会清除待执行操作`() {
+        val chooserCancelled = CreateLoginFlowState()
+            .requestLogin()
+            .cancel()
+        assertEquals(CreateLoginSurface.None, chooserCancelled.surface)
+        assertFalse(chooserCancelled.pendingCreate)
+
+        val webCancelled = CreateLoginFlowState()
+            .requestLogin()
+            .openWebLogin()
+            .cancel()
+        assertEquals(CreateLoginSurface.None, webCancelled.surface)
+        assertFalse(webCancelled.pendingCreate)
+
+        val syncCancelled = CreateLoginFlowState()
+            .requestLogin()
+            .openWebLogin()
+            .reportLoginSuccess()
+            .cancel()
+        assertEquals(CreateLoginSurface.None, syncCancelled.surface)
+        assertFalse(syncCancelled.pendingCreate)
+    }
+
+    @Test
+    fun `旧登录请求的迟到回调不能消费新请求`() {
+        val firstRequest = CreateLoginFlowState()
+            .requestLogin(requestId = 1L)
+            .openWebLogin()
+            .reportLoginSuccess()
+            .cancel()
+        val secondRequest = firstRequest.requestLogin(requestId = 2L)
+
+        assertFalse(secondRequest.ownsPendingRequest(1L))
+        assertTrue(secondRequest.ownsPendingRequest(2L))
+    }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lin0721.linmusic.BuildConfig
+import com.lin0721.linmusic.R
 import com.lin0721.linmusic.core.preferences.SettingsPreferences
 import com.lin0721.linmusic.core.auth.UserPreferences
 import com.lin0721.linmusic.feature.settings.data.UserBindingItem
@@ -16,13 +17,17 @@ import com.lin0721.linmusic.core.log.AppLogger
 import com.lin0721.linmusic.core.network.ResourceProvider
 import com.lin0721.linmusic.core.network.toUserMessage
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "SettingsViewModel"
 
 @OptIn(FlowPreview::class)
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val settingsPreferences: SettingsPreferences,
@@ -98,6 +103,9 @@ class SettingsViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _isCacheOperationRunning = MutableStateFlow(false)
+    val isCacheOperationRunning = _isCacheOperationRunning.asStateFlow()
+
     private val _toastEvent = MutableSharedFlow<String>()
     val toastEvent = _toastEvent.asSharedFlow()
 
@@ -149,9 +157,23 @@ class SettingsViewModel(
     fun updateStreamCacheEnabled(enabled: Boolean) = launchSave { settingsPreferences.saveStreamCacheEnabled(enabled) }
 
     fun updateAudioCacheMaxSize(context: Context, size: Long) {
-        viewModelScope.launch {
-            settingsPreferences.saveAudioCacheMaxSize(size)
-            AudioCacheManager.recreateCache(context, size)
+        runCacheOperation(context) { appContext ->
+            withContext(Dispatchers.IO) {
+                require(size > 0)
+                val previousSize = settingsPreferences.audioCacheMaxSize.first()
+                try {
+                    AudioCacheManager.updateMaxSize(appContext, size)
+                    settingsPreferences.saveAudioCacheMaxSize(size)
+                } catch (error: Exception) {
+                    try {
+                        AudioCacheManager.updateMaxSize(appContext, previousSize)
+                    } catch (rollbackError: Exception) {
+                        error.addSuppressed(rollbackError)
+                    }
+                    throw error
+                }
+            }
+            appContext.getString(R.string.cache_limit_updated)
         }
     }
 
@@ -299,39 +321,36 @@ class SettingsViewModel(
         }
     }
 
-    // ─── 深度缓存清理 ───
+    // ─── 缓存清理：各缓存由所属组件管理，保留日志、WebView 等活动目录 ───
 
     @OptIn(coil.annotation.ExperimentalCoilApi::class)
     fun clearApplicationCache(context: Context) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            runCatching {
-                // 0. 清理 ExoPlayer 媒体缓存
-                AudioCacheManager.clearCache(context)
-
-                // 1. 清理 Coil 图片缓存
-                val imageLoader = coil.Coil.imageLoader(context)
-                imageLoader.memoryCache?.clear()
+        runCacheOperation(context) { appContext ->
+            val imageLoader = coil.Coil.imageLoader(appContext)
+            imageLoader.memoryCache?.clear()
+            withContext(Dispatchers.IO) {
+                AudioCacheManager.clearCache(appContext, settingsPreferences.audioCacheMaxSize.first())
                 imageLoader.diskCache?.clear()
+            }
+            appContext.getString(R.string.cache_cleared)
+        }
+    }
 
-                // 2. 递归清理应用的 cacheDir 临时缓存目录
-                val cacheDir = context.cacheDir
-                if (cacheDir.exists() && cacheDir.isDirectory) {
-                    cacheDir.listFiles()?.forEach { file ->
-                        file.deleteRecursively()
-                    }
-                }
-
-                // 3. 递归清理外部缓存目录 (例如 ExoPlayer 等产生的媒体缓存)
-                val extCacheDir = context.externalCacheDir
-                if (extCacheDir != null && extCacheDir.exists() && extCacheDir.isDirectory) {
-                    extCacheDir.listFiles()?.forEach { file ->
-                        file.deleteRecursively()
-                    }
-                }
-            }.onFailure { AppLogger.e(TAG, "清理应用缓存失败", it) }
-            _toastEvent.emit("应用临时数据与图片缓存已清理完成")
-            _isLoading.value = false
+    private fun runCacheOperation(context: Context, operation: suspend (Context) -> String) {
+        if (_isCacheOperationRunning.value) return
+        _isCacheOperationRunning.value = true
+        val appContext = context.applicationContext
+        viewModelScope.launch {
+            try {
+                _toastEvent.emit(operation(appContext))
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                AppLogger.e(TAG, "缓存操作失败", error)
+                _toastEvent.emit(appContext.getString(R.string.cache_operation_failed))
+            } finally {
+                _isCacheOperationRunning.value = false
+            }
         }
     }
 }

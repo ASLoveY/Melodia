@@ -14,6 +14,82 @@ enum class Screen {
     RecentPlay, ListenData, Cloud, Message, Account
 }
 
+/**
+ * State for the create-menu login handoff.
+ *
+ * The create menu is owned by the app-level bottom overlay while login is
+ * presented above the current screen. Keeping this small state machine
+ * separate makes cancellation and one-shot success handling explicit and
+ * testable without composing the whole app.
+ */
+enum class CreateLoginSurface {
+    None,
+    Choice,
+    Web,
+    // Cookie 已收到，正在等待账号资料同步；此状态仍可被返回键取消。
+    Syncing
+}
+
+data class CreateLoginFlowState(
+    val pendingCreate: Boolean = false,
+    val surface: CreateLoginSurface = CreateLoginSurface.None,
+    val loginSuccessReported: Boolean = false,
+    // 每次创建登录请求独立编号，防止旧请求的迟到回调消费新请求。
+    val requestId: Long = 0L
+) {
+
+    /** Start login on behalf of an unauthenticated create action. */
+    fun requestLogin(requestId: Long = this.requestId + 1L): CreateLoginFlowState = copy(
+        pendingCreate = true,
+        surface = CreateLoginSurface.Choice,
+        loginSuccessReported = false,
+        requestId = requestId
+    )
+
+    /** Move from the login-method chooser to the web login page. */
+    fun openWebLogin(): CreateLoginFlowState = copy(
+        surface = CreateLoginSurface.Web,
+        loginSuccessReported = false
+    )
+
+    /** Cancel either login surface and discard the pending create action. */
+    fun cancel(): CreateLoginFlowState = copy(
+        pendingCreate = false,
+        surface = CreateLoginSurface.None,
+        loginSuccessReported = false
+    )
+
+    /**
+     * Accept the first callback from the web login page. Further callbacks
+     * are ignored, which prevents repeated cookie checks from reopening the
+     * create menu or syncing the same login more than once.
+     */
+    fun reportLoginSuccess(): CreateLoginFlowState {
+        if (surface != CreateLoginSurface.Web || loginSuccessReported) return this
+        return copy(
+            surface = CreateLoginSurface.Syncing,
+            loginSuccessReported = true
+        )
+    }
+
+    /**
+     * Consume the pending create action after the account profile is synced.
+     * The returned state can be used to show the create menu exactly once.
+     */
+    fun consumePendingCreate(): CreateLoginFlowState {
+        if (!pendingCreate) return this
+        return copy(
+            pendingCreate = false,
+            surface = CreateLoginSurface.None,
+            loginSuccessReported = false
+        )
+    }
+
+    /** Whether a completion callback still belongs to this pending request. */
+    fun ownsPendingRequest(requestId: Long): Boolean =
+        pendingCreate && this.requestId == requestId
+}
+
 // 应用级导航状态：回退栈与各页面所需的跳转参数
 class MelodiaNavigationState {
 

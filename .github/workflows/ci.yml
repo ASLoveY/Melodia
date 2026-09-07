@@ -31,7 +31,10 @@ jobs:
       - name: 单元测试
         run: ./gradlew testDebugUnitTest --no-daemon
 
-      # release 构建同时验证 R8 规则：接口或序列化器被误裁时此步会失败
+      - name: Android Lint
+        run: ./gradlew lintDebug --no-daemon
+
+      # 验证发布构建和 R8 流程；反射、序列化的运行兼容性仍需混淆 APK 冒烟验证
       - name: Release 构建（含 R8）
         run: ./gradlew assembleRelease --no-daemon
 
@@ -41,6 +44,14 @@ jobs:
         with:
           name: test-results
           path: app/build/reports/tests/
+          retention-days: 7
+
+      - name: 上传 Lint 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-results
+          path: app/build/reports/lint-results-debug.*
           retention-days: 7
 
       - name: 上传 APK 与混淆映射

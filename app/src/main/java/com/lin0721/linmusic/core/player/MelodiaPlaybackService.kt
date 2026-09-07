@@ -78,11 +78,13 @@ class MelodiaPlaybackService : MediaSessionService() {
                     settingsPreferences.audioCacheMaxSize.first()
                 }
                 val cache = AudioCacheManager.getCache(this@MelodiaPlaybackService, maxSize)
-                CacheDataSource.Factory()
-                    .setCache(cache)
-                    .setUpstreamDataSourceFactory(defaultDataSourceFactory)
-                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                    .createDataSource()
+                CacheReadRecoveryDataSource(
+                    CacheDataSource.Factory()
+                        .setCache(cache)
+                        .setUpstreamDataSourceFactory(defaultDataSourceFactory)
+                        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                        .createDataSource()
+                )
             } else {
                 defaultDataSourceFactory.createDataSource()
             }

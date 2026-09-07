@@ -3,9 +3,7 @@ package com.lin0721.linmusic.feature.settings.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lin0721.linmusic.LocalBottomOverlayInset
@@ -32,18 +30,12 @@ fun PlaybackDownloadSettingsView(viewModel: SettingsViewModel) {
             }
         }
         item {
-            SettingsGroupCard("下载与缓存") {
+            SettingsGroupCard("播放缓存") {
                 SettingsSwitchRow(
                     title = "边听边存",
                     subtitle = "在线播放歌曲时自动缓存到本地",
                     checked = streamCacheEnabled,
                     onCheckedChange = { viewModel.updateStreamCacheEnabled(it) }
-                )
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                SettingsRow(
-                    title = "下载目录",
-                    subtitle = "/Android/data/com.lin0721.linmusic/files/Download",
-                    onClick = {}
                 )
             }
         }

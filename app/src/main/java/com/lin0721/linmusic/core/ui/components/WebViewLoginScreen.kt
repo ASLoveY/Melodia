@@ -42,6 +42,9 @@ fun WebViewLoginScreen(
     modifier: Modifier = Modifier
 ) {
     var isLoading by remember { mutableStateOf(true) }
+    var loginSuccessReported by remember { mutableStateOf(false) }
+    var isReleased by remember { mutableStateOf(false) }
+    val latestOnLoginSuccess by rememberUpdatedState(onLoginSuccess)
     
     // 净化 UA（剔除 wv/WebView 关键字）
     val baseUA = "Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
@@ -115,12 +118,22 @@ fun WebViewLoginScreen(
 						webViewClient = object : WebViewClient() {
 							override fun onPageFinished(view: WebView?, url: String?) {
 								// 实时提取 Token (MUSIC_U)
-								checkCookies(onLoginSuccess)
+								checkCookies { cookies ->
+									if (!isReleased && !loginSuccessReported) {
+										loginSuccessReported = true
+										latestOnLoginSuccess(cookies)
+									}
+								}
                                 isLoading = false // 页面完全加载渲染完成后，关闭加载指示器
 							}
 
 							override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
-								checkCookies(onLoginSuccess)
+								checkCookies { cookies ->
+									if (!isReleased && !loginSuccessReported) {
+										loginSuccessReported = true
+										latestOnLoginSuccess(cookies)
+									}
+								}
 							}
 
 							override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -131,7 +144,15 @@ fun WebViewLoginScreen(
 						loadUrl(loginUrl, extraHeaders)
 					}
 				},
-				modifier = Modifier.fillMaxSize()
+				modifier = Modifier.fillMaxSize(),
+                onReset = null,
+                onRelease = { webView ->
+                    isReleased = true
+                    webView.webViewClient = WebViewClient()
+                    webView.webChromeClient = null
+                    webView.stopLoading()
+                    webView.destroy()
+                }
 			)
 
 			// 加载过渡

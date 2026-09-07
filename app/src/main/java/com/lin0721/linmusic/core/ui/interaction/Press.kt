@@ -25,7 +25,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
+import androidx.compose.ui.node.ObserverModifierNode
 import androidx.compose.ui.node.currentValueOf
+import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.semantics.Role
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
@@ -64,15 +66,22 @@ private class PressHighlightNode(
     private val interactionSource: InteractionSource,
     private val pressedScale: Float,
     private val dimAlpha: Float
-) : Modifier.Node(), DrawModifierNode, CompositionLocalConsumerModifierNode {
+) : Modifier.Node(), DrawModifierNode, CompositionLocalConsumerModifierNode, ObserverModifierNode {
 
     private val scale = Animatable(1f)
     private val dim = Animatable(0f)
     private var scaleJob: Job? = null
     private var dimJob: Job? = null
+    private var longPressDelayMs = 0L
+
+    override fun onObservedReadsChanged() {
+        observeReads {
+            longPressDelayMs = currentValueOf(LocalViewConfiguration).longPressTimeoutMillis
+        }
+    }
 
     override fun onAttach() {
-        val longPressDelayMs = currentValueOf(LocalViewConfiguration).longPressTimeoutMillis
+        onObservedReadsChanged()
         coroutineScope.launch {
             interactionSource.interactions.collect { interaction ->
                 when (interaction) {

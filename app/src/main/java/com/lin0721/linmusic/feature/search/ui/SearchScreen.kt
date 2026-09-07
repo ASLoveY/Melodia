@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -205,6 +206,7 @@ fun SearchScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("search_input")
                 .padding(horizontal = MelodiaSpacing.md)
                 .padding(bottom = MelodiaSpacing.sm)
                 .height(36.dp)

@@ -40,7 +40,10 @@ import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 @Composable
 fun CreatePopupMenu(
     onDismiss: () -> Unit,
-    onLoginRequest: () -> Unit
+    onLoginRequest: () -> Unit,
+    openCreateDialogRequest: Long? = null,
+    onCreateDialogRequestConsumed: (Long) -> Unit = {},
+    onCreateDialogClosed: () -> Unit = {}
 ) {
     val viewModel: CreateViewModel = koinViewModel()
     val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
@@ -48,10 +51,29 @@ fun CreatePopupMenu(
     val context = LocalContext.current
 
     var showCreateDialog by remember { mutableStateOf(false) }
+    var handledCreateDialogRequest by remember { mutableStateOf<Long?>(null) }
+
+    // 登录成功后由应用层传入一次性请求。等创建 ViewModel 的资料流就绪，
+    // 再打开表单，避免表单先出现又被未登录状态覆盖。
+    LaunchedEffect(openCreateDialogRequest, userProfile) {
+        val request = openCreateDialogRequest
+        if (request != null && userProfile != null && handledCreateDialogRequest != request) {
+            handledCreateDialogRequest = request
+            showCreateDialog = true
+            onCreateDialogRequestConsumed(request)
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.toastEvent.collect { message ->
             com.lin0721.linmusic.core.ui.components.ToastManager.showToast(message)
+        }
+    }
+
+    val closeCreateDialog = {
+        if (showCreateDialog) {
+            showCreateDialog = false
+            onCreateDialogClosed()
         }
     }
 
@@ -77,23 +99,6 @@ fun CreatePopupMenu(
             }
         )
 
-        CreateMenuItem(
-            icon = Icons.Rounded.GroupAdd,
-            title = "共建歌单",
-            subtitle = "与好友一起创建歌单",
-            onClick = {
-                com.lin0721.linmusic.core.ui.components.ToastManager.showToast("功能开发中，敬请期待")
-            }
-        )
-
-        CreateMenuItem(
-            icon = Icons.Rounded.FolderShared,
-            title = "共享合辑",
-            subtitle = "将好友的音乐喜好合并为一个歌单",
-            onClick = {
-                com.lin0721.linmusic.core.ui.components.ToastManager.showToast("功能开发中，敬请期待")
-            }
-        )
     }
 
     if (showCreateDialog) {
@@ -101,11 +106,11 @@ fun CreatePopupMenu(
             isCreating = isCreating,
             onConfirm = { name, isPrivate ->
                 viewModel.createNewPlaylist(name, isPrivate) {
-                    showCreateDialog = false
+                    closeCreateDialog()
                     onDismiss()
                 }
             },
-            onDismiss = { showCreateDialog = false }
+            onDismiss = closeCreateDialog
         )
     }
 }

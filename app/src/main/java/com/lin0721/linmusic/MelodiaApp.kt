@@ -6,13 +6,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,8 +36,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.Job
+import com.lin0721.linmusic.core.ui.components.LoginBottomSheet
 import com.lin0721.linmusic.core.ui.components.ProfileSidebar
 import com.lin0721.linmusic.core.ui.components.ToastManager
+import com.lin0721.linmusic.core.ui.components.WebViewLoginScreen
 import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.BackgroundDark
@@ -64,6 +74,11 @@ fun MelodiaApp() {
     val sidebar = rememberMelodiaSidebarState(SidebarWidth)
 
     var showCreateSheet by remember { mutableStateOf(false) }
+    var createLoginState by remember { mutableStateOf(CreateLoginFlowState()) }
+    var createLoginSyncJob by remember { mutableStateOf<Job?>(null) }
+    var createLoginRequestSequence by remember { mutableStateOf(0L) }
+    var createDialogRequestSequence by remember { mutableStateOf(0L) }
+    var openCreateDialogRequest by remember { mutableStateOf<Long?>(null) }
     // 网页登录界面可见性状态
     var isLoginScreenVisible by remember { mutableStateOf(false) }
     // MV 播放页是否处于全屏态：全屏时隐藏底部导航栏/悬浮播放条，避免盖住视频
@@ -76,14 +91,38 @@ fun MelodiaApp() {
 
     val toastMessage = rememberGlobalToastMessage()
 
+    val cancelCreateLoginFlow: () -> Unit = {
+        createLoginSyncJob?.cancel()
+        createLoginSyncJob = null
+        createLoginState = createLoginState.cancel()
+        openCreateDialogRequest = null
+    }
+
+    // 页面离开组合时终止创建流程的资料同步，避免旧页面回调修改新页面状态。
+    DisposableEffect(Unit) {
+        onDispose {
+            createLoginSyncJob?.cancel()
+        }
+    }
+
     // 系统返回键与侧滑返回拦截：按优先级关闭浮层或返回上一级
-    val isAnyOverlayOpen = playerSheet.isOpen || sidebar.isOpen || showCreateSheet || navigation.canNavigateBack
+    val isAnyOverlayOpen = playerSheet.isOpen ||
+            createLoginState.surface != CreateLoginSurface.None ||
+            sidebar.isOpen ||
+            showCreateSheet ||
+            navigation.canNavigateBack
 
     BackHandler(enabled = isAnyOverlayOpen) {
         when {
             playerSheet.isOpen -> playerSheet.animateTo(false, 0f)
+            createLoginState.surface != CreateLoginSurface.None -> {
+                cancelCreateLoginFlow()
+            }
             sidebar.isOpen -> sidebar.close()
-            showCreateSheet -> showCreateSheet = false
+            showCreateSheet -> {
+                showCreateSheet = false
+                openCreateDialogRequest = null
+            }
             navigation.canNavigateBack -> navigation.navigateBack()
         }
     }
@@ -137,8 +176,6 @@ fun MelodiaApp() {
                     onNavigateToRecentPlay = { navigation.openRecentPlay() },
                     onNavigateToListenData = { navigation.openListenData() },
                     onNavigateToCloud = { navigation.openCloud() },
-                    onNavigateToMessage = { navigation.openMessage() },
-                    onNavigateToAccount = { navigation.openAccount() },
                     onNavigateToSettings = { navigation.navigateTo(Screen.Settings) }
                 )
             }
@@ -195,7 +232,10 @@ fun MelodiaApp() {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.4f))
-                                .pressable(MelodiaPress.None) { showCreateSheet = false }
+                                .pressable(MelodiaPress.None) {
+                                    showCreateSheet = false
+                                    openCreateDialogRequest = null
+                                }
                         )
                     }
 
@@ -204,7 +244,9 @@ fun MelodiaApp() {
                         modifier = Modifier.align(Alignment.BottomCenter),
                         currentScreen = navigation.currentScreen,
                         showCreateSheet = showCreateSheet,
-                        isLoginScreenVisible = isLoginScreenVisible,
+                        isLoginScreenVisible = isLoginScreenVisible ||
+                                createLoginState.surface == CreateLoginSurface.Web ||
+                                createLoginState.surface == CreateLoginSurface.Syncing,
                         isMvFullscreen = isMvFullscreen,
                         currentTrack = currentTrack,
                         isPlaying = isPlaying,
@@ -216,9 +258,24 @@ fun MelodiaApp() {
                         onMiniPlayerClick = { playerSheet.animateTo(true, 0f) },
                         onMiniPlayerDrag = { delta -> playerSheet.onDrag(delta) },
                         onMiniPlayerDragEnd = { velocity -> playerSheet.onDragEnd(velocity) },
-                        onCreateDismiss = { showCreateSheet = false },
+                        onCreateDismiss = {
+                            showCreateSheet = false
+                            openCreateDialogRequest = null
+                        },
                         onNavigate = { navigation.openTab(it) },
-                        onCreateClick = { showCreateSheet = !showCreateSheet },
+                        onCreateClick = {
+                            showCreateSheet = !showCreateSheet
+                            if (!showCreateSheet) openCreateDialogRequest = null
+                        },
+                        onLoginRequest = {
+                            createLoginRequestSequence += 1L
+                            createLoginState = createLoginState.requestLogin(createLoginRequestSequence)
+                        },
+                        openCreateDialogRequest = openCreateDialogRequest,
+                        // 请求在表单打开时由 CreatePopupMenu 记住，表单关闭时
+                        // 再清除 token，避免重组或返回操作重复打开表单。
+                        onCreateDialogRequestConsumed = {},
+                        onCreateDialogClosed = { openCreateDialogRequest = null },
                         showCreateEntry = showCreateEntry,
                         onOverlayHeightChanged = { bottomOverlayHeight = it }
                     )
@@ -261,6 +318,75 @@ fun MelodiaApp() {
                 navigation.openPlaylist(albumId, isAlbum = true)
             }
         )
+
+        // 创建歌单触发的登录流程在应用层托管，这样登录完成后可以回到
+        // 同一个创建流程，同时不影响当前页面和底栏导航栈。
+        if (createLoginState.surface == CreateLoginSurface.Choice) {
+            LoginBottomSheet(
+                onDismiss = {
+                    cancelCreateLoginFlow()
+                },
+                onWebLogin = {
+                    createLoginState = createLoginState.openWebLogin()
+                }
+            )
+        }
+
+        if (createLoginState.surface == CreateLoginSurface.Web) {
+            val webLoginRequestId = createLoginState.requestId
+            WebViewLoginScreen(
+                onClose = {
+                    cancelCreateLoginFlow()
+                },
+                onLoginSuccess = { cookies ->
+                    val shouldSync = createLoginState.surface == CreateLoginSurface.Web &&
+                            createLoginState.ownsPendingRequest(webLoginRequestId) &&
+                            !createLoginState.loginSuccessReported
+                    if (shouldSync) {
+                        val requestId = webLoginRequestId
+                        createLoginState = createLoginState.reportLoginSuccess()
+                        createLoginSyncJob = viewModel.handleLoginSuccess(cookies) { syncSucceeded ->
+                            if (syncSucceeded && createLoginState.ownsPendingRequest(requestId)) {
+                                createLoginSyncJob = null
+                                // 仅在资料同步成功后恢复创建流程；消费后即清除，
+                                // 通过一次性 request token 直接打开新建歌单表单。
+                                createLoginState = createLoginState.consumePendingCreate()
+                                showCreateSheet = true
+                                createDialogRequestSequence += 1L
+                                openCreateDialogRequest = createDialogRequestSequence
+                            } else if (!syncSucceeded && createLoginState.ownsPendingRequest(requestId)) {
+                                createLoginSyncJob = null
+                                // 登录 Cookie 有效但账号资料未同步时，放弃本次
+                                // 待办，避免下一次无关登录误打开创建菜单。
+                                createLoginState = createLoginState.cancel()
+                                ToastManager.showToast("登录信息同步失败，请重试")
+                            }
+                        }
+                    }
+                }
+            )
+        }
+
+        if (createLoginState.surface == CreateLoginSurface.Syncing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BackgroundDark)
+                    .pressable(MelodiaPress.None) {},
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = Color.White)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(text = "正在同步账号信息", color = Color.White)
+                    TextButton(
+                        onClick = cancelCreateLoginFlow
+                    ) {
+                        Text(text = "取消", color = Color.White)
+                    }
+                }
+            }
+        }
 
         // 4. 全局自定义 Toast 提示
         MelodiaToastHost(toastMessage = toastMessage)

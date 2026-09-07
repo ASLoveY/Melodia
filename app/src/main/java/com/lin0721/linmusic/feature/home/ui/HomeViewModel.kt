@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.lin0721.linmusic.core.player.PlayerManager
@@ -203,13 +205,24 @@ class HomeViewModel(
         playerManager.togglePlayPause()
     }
 
-    fun handleLoginSuccess(cookies: String) {
+    fun handleLoginSuccess(cookies: String, onSyncCompleted: (Boolean) -> Unit = {}): Job =
         viewModelScope.launch {
-            val profile = syncProfileAfterLoginUseCase(cookies) ?: return@launch
-            _toastEvent.emit("登录成功，欢迎回来，${profile.nickname}！")
-            loadHomeData()
+            try {
+                val profile = syncProfileAfterLoginUseCase(cookies)
+                if (profile == null) {
+                    onSyncCompleted(false)
+                    return@launch
+                }
+                _toastEvent.emit("登录成功，欢迎回来，${profile.nickname}！")
+                loadHomeData()
+                onSyncCompleted(true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "登录后同步账号资料失败", e)
+                onSyncCompleted(false)
+            }
         }
-    }
 
     fun logout() {
         viewModelScope.launch {
@@ -305,15 +318,15 @@ class HomeViewModel(
                 }
             }
         } else {
-                                    val state = uiState.value
-                                        if (state is HomeUiState.Success && state.data.dailySongs.isNotEmpty()) {
-                                            val firstSong = state.data.dailySongs.first()
-                                            viewModelScope.launch {
-                                                playbackRepository.getIntelligenceSongs(firstSong.id, 0).collect { result ->
-                                                    result.onSuccess { tracks ->
-                                                        val currentItem = QueueItem(firstSong.id, firstSong.name, firstSong.ar.joinToString("/") { it.name }, firstSong.al.picUrl)
-                                                        val items = listOf(currentItem) + tracks.map { track ->
-                                                            QueueItem(track.id, track.name, track.ar.joinToString("/") { it.name }, track.al.picUrl)
+            val state = uiState.value
+            if (state is HomeUiState.Success && state.data.dailySongs.isNotEmpty()) {
+                val firstSong = state.data.dailySongs.first()
+                viewModelScope.launch {
+                    playbackRepository.getIntelligenceSongs(firstSong.id, 0).collect { result ->
+                        result.onSuccess { tracks ->
+                            val currentItem = QueueItem(firstSong.id, firstSong.name, firstSong.ar.joinToString("/") { it.name }, firstSong.al.picUrl)
+                            val items = listOf(currentItem) + tracks.map { track ->
+                                QueueItem(track.id, track.name, track.ar.joinToString("/") { it.name }, track.al.picUrl)
                             }
                             playerManager.playQueue(items, 0, playContext = "intelligence")
                             _toastEvent.emit("已从《${firstSong.name}》开启心动模式")

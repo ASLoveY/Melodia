@@ -58,7 +58,11 @@ fun MelodiaBottomOverlay(
     onNavigate: (Screen) -> Unit,
     onCreateClick: () -> Unit,
     showCreateEntry: Boolean = true,
-    onOverlayHeightChanged: (Dp) -> Unit = {}
+    onOverlayHeightChanged: (Dp) -> Unit = {},
+    onLoginRequest: () -> Unit = {},
+    openCreateDialogRequest: Long? = null,
+    onCreateDialogRequestConsumed: (Long) -> Unit = {},
+    onCreateDialogClosed: () -> Unit = {}
 ) {
     val density = LocalDensity.current
     Column(
@@ -84,9 +88,10 @@ fun MelodiaBottomOverlay(
             ) {
                 CreatePopupMenu(
                     onDismiss = onCreateDismiss,
-                    onLoginRequest = {
-                        // TODO: 触发登录流程
-                    }
+                    onLoginRequest = onLoginRequest,
+                    openCreateDialogRequest = openCreateDialogRequest,
+                    onCreateDialogRequestConsumed = onCreateDialogRequestConsumed,
+                    onCreateDialogClosed = onCreateDialogClosed
                 )
             }
         }

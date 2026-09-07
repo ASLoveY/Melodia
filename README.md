@@ -105,19 +105,25 @@ Repository 出口统一返回 `Result`，失败一律为 `AppError` 的子类型
 
 ## 构建与测试
 
+需要完整的 JDK 21（包含 `javac` 和 `jlink`）、Android SDK Platform 36.1 与 Build-Tools 36.0.0。通过 `JAVA_HOME` 配置 JDK，通过 `ANDROID_HOME` 或未纳入版本控制的 `local.properties` 配置 SDK 路径；Windows 使用 `gradlew.bat`。
+
 ```bash
 ./gradlew testDebugUnitTest
+```
+
+```bash
+./gradlew lintDebug
 ```
 
 ```bash
 ./gradlew assembleRelease
 ```
 
-`release` 已开启 R8 混淆与代码裁剪。Retrofit 接口与 `@Serializable` DTO 有显式 keep 规则——二者被误裁的表现是接口静默解析失败而非崩溃，因此 `assembleRelease` 同时充当混淆规则的回归验证。
+`release` 已开启 R8 混淆与代码裁剪，Retrofit 接口与 `@Serializable` DTO 有显式 keep 规则。`assembleRelease` 验证发布构建和混淆流程能完成；反射、序列化及真实接口的运行兼容性仍需在混淆 APK 中执行冒烟验证。
 
 签名材料从版本控制之外注入，未配置时自动退回调试签名，`assembleRelease` 始终可产出可安装包。配置方式见 [RELEASE_SIGNING.md](RELEASE_SIGNING.md)。
 
-CI 在推送到 `main` 与 PR 时运行单元测试与 release 构建，产物包含 APK 与 `mapping.txt`。
+CI 在推送到 `main` 与 PR 时运行单元测试、Android Lint 与 release 构建，产物包含测试与 Lint 报告、APK 和 `mapping.txt`。
 
 ---
 

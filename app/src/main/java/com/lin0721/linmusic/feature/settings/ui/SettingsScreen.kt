@@ -35,7 +35,7 @@ import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 
 // 定义多级菜单类型
 enum class SettingsSubMenu(val title: String) {
-    PLAYBACK_DOWNLOAD("播放与下载"),
+    PLAYBACK_DOWNLOAD("播放与缓存"),
     AUDIO_QUALITY("音质"),
     PRIVACY("隐私设置"),
     STORAGE("储存空间"),
@@ -158,13 +158,14 @@ private fun MainSettingsMenu(
         // 多级设置菜单入口组
         item {
             SettingsGroupCard("常规设置") {
-                SettingsSubMenu.values().forEachIndexed { index, item ->
+                val availableMenus = SettingsSubMenu.entries.filter { it != SettingsSubMenu.PRIVACY }
+                availableMenus.forEachIndexed { index, item ->
                     SettingsRow(
                         title = item.title,
                         subtitle = "",
                         onClick = { onNavigate(item) }
                     )
-                    if (index < SettingsSubMenu.values().lastIndex) {
+                    if (index < availableMenus.lastIndex) {
                         HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
                     }
                 }
