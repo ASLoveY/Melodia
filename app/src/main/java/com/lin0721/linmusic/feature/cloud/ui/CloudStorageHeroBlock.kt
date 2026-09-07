@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.cloud.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
+import com.lin0721.linmusic.core.ui.theme.AppSurface
 import com.lin0721.linmusic.feature.cloud.domain.CloudQuota
 import com.lin0721.linmusic.feature.cloud.domain.formatWholeGigabytes
 
@@ -62,7 +64,7 @@ fun CloudStorageHeroBlock(quota: CloudQuota, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .weight(darkWeight)
                 .fillMaxHeight()
-                .background(SurfaceDark)
+                .background(AppSurface)
                 .padding(horizontal = MelodiaSpacing.md),
             verticalArrangement = Arrangement.Center
         ) {

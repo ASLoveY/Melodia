@@ -1,5 +1,9 @@
 package com.lin0721.linmusic.feature.cloud.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppAccent
+
+import com.lin0721.linmusic.core.ui.theme.AppText
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -35,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lin0721.linmusic.core.ui.components.MelodiaDragHandle
 import com.lin0721.linmusic.core.ui.interaction.pressable
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.BottomSheetShape
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
@@ -63,7 +67,7 @@ fun CloudUploadProgressSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = BackgroundDark,
+        containerColor = AppBackground,
         shape = BottomSheetShape,
         dragHandle = { MelodiaDragHandle() }
     ) {
@@ -76,7 +80,7 @@ fun CloudUploadProgressSheet(
         ) {
             Text(
                 text = "正在上传",
-                color = Color.White,
+                color = AppText,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
@@ -92,12 +96,12 @@ fun CloudUploadProgressSheet(
                 LinearProgressIndicator(
                     progress = { overallProgress.coerceIn(0f, 1f) },
                     modifier = Modifier.weight(1f).height(6.dp),
-                    color = NeteaseRed,
-                    trackColor = Color.White.copy(alpha = 0.1f)
+                    color = AppAccent,
+                    trackColor = AppText.copy(alpha = 0.1f)
                 )
                 Text(
                     text = "${(overallProgress * 100).toInt()}%",
-                    color = Color.White,
+                    color = AppText,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(start = MelodiaSpacing.sm)
                 )
@@ -134,7 +138,7 @@ private fun UploadTaskRow(task: UploadTask, onRetry: () -> Unit) {
             UploadStatus.FAILED -> Icon(
                 Icons.Rounded.ErrorOutline,
                 contentDescription = null,
-                tint = NeteaseRed,
+                tint = AppAccent,
                 modifier = Modifier.size(18.dp)
             )
 
@@ -146,7 +150,7 @@ private fun UploadTaskRow(task: UploadTask, onRetry: () -> Unit) {
             )
 
             else -> CircularProgressIndicator(
-                color = NeteaseRed,
+                color = AppAccent,
                 strokeWidth = 2.dp,
                 modifier = Modifier.size(18.dp)
             )
@@ -155,7 +159,7 @@ private fun UploadTaskRow(task: UploadTask, onRetry: () -> Unit) {
         Column(modifier = Modifier.weight(1f).padding(start = MelodiaSpacing.sm)) {
             Text(
                 text = task.fileName,
-                color = if (task.status == UploadStatus.FAILED) NeteaseRed else Color.White,
+                color = if (task.status == UploadStatus.FAILED) AppAccent else AppText,
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -163,7 +167,7 @@ private fun UploadTaskRow(task: UploadTask, onRetry: () -> Unit) {
             if (task.status == UploadStatus.FAILED && task.errorMessage != null) {
                 Text(
                     text = task.errorMessage,
-                    color = NeteaseRed.copy(alpha = 0.8f),
+                    color = AppAccent.copy(alpha = 0.8f),
                     fontSize = 11.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -188,7 +192,7 @@ private fun UploadTaskRow(task: UploadTask, onRetry: () -> Unit) {
                 Icon(
                     Icons.Rounded.Refresh,
                     contentDescription = "重试",
-                    tint = Color.White,
+                    tint = AppText,
                     modifier = Modifier.size(18.dp)
                 )
             }

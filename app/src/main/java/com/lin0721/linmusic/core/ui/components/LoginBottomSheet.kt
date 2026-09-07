@@ -1,5 +1,8 @@
 package com.lin0721.linmusic.core.ui.components
 
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
+import com.lin0721.linmusic.core.ui.theme.AppText
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,8 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lin0721.linmusic.core.ui.theme.BottomSheetShape
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
-import com.lin0721.linmusic.core.ui.theme.SurfaceLight
+import com.lin0721.linmusic.core.ui.theme.AppSurface
+import com.lin0721.linmusic.core.ui.theme.AppSurfaceRaised
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 
 /**
@@ -30,7 +33,7 @@ fun LoginBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceDark,
+        containerColor = AppSurface,
         shape = BottomSheetShape,
         dragHandle = { MelodiaDragHandle() }
     ) {
@@ -46,13 +49,13 @@ fun LoginBottomSheet(
                 text = "登录",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color.White,
+                color = AppText,
                 modifier = Modifier.padding(bottom = MelodiaSpacing.sm)
             )
             Text(
                 text = "登录后享受完整体验",
                 fontSize = 13.sp,
-                color = Color.Gray,
+                color = com.lin0721.linmusic.core.ui.theme.AppTextSecondary,
                 modifier = Modifier.padding(bottom = MelodiaSpacing.xl)
             )
 
@@ -115,25 +118,25 @@ private fun LoginOptionButton(
                 .height(56.dp),
             shape = RoundedCornerShape(16.dp),
             border = ButtonDefaults.outlinedButtonBorder(true).copy(
-                brush = androidx.compose.ui.graphics.SolidColor(SurfaceLight)
+                brush = androidx.compose.ui.graphics.SolidColor(AppSurfaceRaised)
             ),
             colors = ButtonDefaults.outlinedButtonColors(
                 containerColor = Color.Transparent,
-                contentColor = Color.White
+                contentColor = AppText
             )
         ) {
             Icon(
                 icon,
                 contentDescription = null,
                 modifier = Modifier.size(22.dp),
-                tint = Color.LightGray
+                tint = com.lin0721.linmusic.core.ui.theme.AppTextSecondary
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = text,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color.White
+                color = AppText
             )
         }
     }

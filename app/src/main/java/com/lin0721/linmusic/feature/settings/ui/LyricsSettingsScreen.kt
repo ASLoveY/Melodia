@@ -1,5 +1,8 @@
 package com.lin0721.linmusic.feature.settings.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+import com.lin0721.linmusic.core.ui.theme.AppAccent
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,8 +17,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lin0721.linmusic.core.ui.components.MelodiaTextButton
 import com.lin0721.linmusic.LocalBottomOverlayInset
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppSurface
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 
 @Composable
@@ -48,13 +51,13 @@ fun LyricsSettingsView(viewModel: SettingsViewModel) {
                         checked = showDesktopLrc,
                         onCheckedChange = { viewModel.updateShowDesktopLrc(it) }
                     )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                     SettingsRow(
                         title = "悬浮歌词字号",
                         subtitle = sizeLabel,
                         onClick = { showSizeDialog = true }
                     )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                     SettingsRow(
                         title = "悬浮歌词颜色",
                         subtitle = colorLabel,
@@ -68,7 +71,7 @@ fun LyricsSettingsView(viewModel: SettingsViewModel) {
         if (showSizeDialog) {
             AlertDialog(
                 onDismissRequest = { showSizeDialog = false },
-                title = { Text("选择悬浮歌词字号", color = Color.White) },
+                title = { Text("选择悬浮歌词字号", color = AppText) },
                 text = {
                     Column {
                         val options = listOf(12, 14, 16, 18, 20)
@@ -90,22 +93,22 @@ fun LyricsSettingsView(viewModel: SettingsViewModel) {
                                         showSizeDialog = false
                                     },
                                     colors = RadioButtonDefaults.colors(
-                                        selectedColor = NeteaseRed,
-                                        unselectedColor = TextGray
+                                        selectedColor = AppAccent,
+                                        unselectedColor = AppTextSecondary
                                     )
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = "${size} sp", color = Color.White, fontSize = 16.sp)
+                                Text(text = "${size} sp", color = AppText, fontSize = 16.sp)
                             }
                         }
                     }
                 },
                 confirmButton = {
                     MelodiaTextButton(onClick = { showSizeDialog = false }) {
-                        Text("取消", color = NeteaseRed)
+                        Text("取消", color = AppAccent)
                     }
                 },
-                containerColor = SurfaceDark
+                containerColor = AppSurface
             )
         }
 
@@ -113,7 +116,7 @@ fun LyricsSettingsView(viewModel: SettingsViewModel) {
         if (showColorDialog) {
             AlertDialog(
                 onDismissRequest = { showColorDialog = false },
-                title = { Text("选择悬浮歌词颜色", color = Color.White) },
+                title = { Text("选择悬浮歌词颜色", color = AppText) },
                 text = {
                     Column {
                         val options = listOf(
@@ -139,22 +142,22 @@ fun LyricsSettingsView(viewModel: SettingsViewModel) {
                                         showColorDialog = false
                                     },
                                     colors = RadioButtonDefaults.colors(
-                                        selectedColor = NeteaseRed,
-                                        unselectedColor = TextGray
+                                        selectedColor = AppAccent,
+                                        unselectedColor = AppTextSecondary
                                     )
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = label, color = Color.White, fontSize = 16.sp)
+                                Text(text = label, color = AppText, fontSize = 16.sp)
                             }
                         }
                     }
                 },
                 confirmButton = {
                     MelodiaTextButton(onClick = { showColorDialog = false }) {
-                        Text("取消", color = NeteaseRed)
+                        Text("取消", color = AppAccent)
                     }
                 },
-                containerColor = SurfaceDark
+                containerColor = AppSurface
             )
         }
     }

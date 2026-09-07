@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.home.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -26,6 +28,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import com.lin0721.linmusic.core.ui.components.MelodiaIconButton
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,9 +57,9 @@ import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.lin0721.linmusic.core.auth.UserProfile
 import com.lin0721.linmusic.core.ui.interaction.pressable
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
-import com.lin0721.linmusic.core.ui.theme.FilterPillInactive
-import com.lin0721.linmusic.core.ui.theme.GradientStart
+import com.lin0721.linmusic.core.ui.theme.AppBackground
+import com.lin0721.linmusic.core.ui.theme.AppSurfaceRaised
+import com.lin0721.linmusic.core.ui.theme.AppHeaderTint
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 import com.lin0721.linmusic.core.ui.theme.PressStyle
@@ -79,7 +84,8 @@ private fun getGreetingText(): String {
 fun TopGreetingBar(
     userProfile: UserProfile?,
     onLoginClick: () -> Unit,
-    onSearchClick: () -> Unit = {}
+    onSearchClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     val greeting = remember { getGreetingText() }
     Row(
@@ -100,27 +106,30 @@ fun TopGreetingBar(
                 contentScale = ContentScale.Crop
             )
         } else {
-            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(AppSurfaceRaised), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             if (userProfile != null) {
-                Text(text = "$greeting，", fontSize = 12.sp, color = Color.LightGray)
+                Text(text = "$greeting，", fontSize = 12.sp, color = AppTextSecondary)
                 Text(text = userProfile.nickname, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             } else {
                 Text(text = "未登录", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Text(text = "点击登录", fontSize = 12.sp, color = Color.LightGray)
+                Text(text = "点击登录", fontSize = 12.sp, color = AppTextSecondary)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            MelodiaIconButton(onClick = onSettingsClick, modifier = Modifier.testTag("home_settings")) {
+                Icon(Icons.Rounded.Settings, contentDescription = "设置", tint = MaterialTheme.colorScheme.onSurface)
+            }
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .pressable(MelodiaPress.Icon) { onSearchClick() }
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.1f)),
+                    .background(AppSurfaceRaised),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Rounded.Search, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
@@ -138,18 +147,20 @@ fun HomeSharedHeader(
     secondarySelected: Boolean,
     onSecondarySelected: () -> Unit,
     onAvatarClick: () -> Unit,
-    onSearchClick: () -> Unit
+    onSearchClick: () -> Unit,
+    onSettingsClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(GradientStart, BackgroundDark)))
+            .background(Brush.verticalGradient(listOf(AppHeaderTint, AppBackground)))
             .statusBarsPadding()
     ) {
         TopGreetingBar(
             userProfile = userProfile,
             onLoginClick = onAvatarClick,
-            onSearchClick = onSearchClick
+            onSearchClick = onSearchClick,
+            onSettingsClick = onSettingsClick
         )
         FilterPills(
             selectedIndex = selectedTab,
@@ -284,11 +295,11 @@ private fun FilterPillChip(
     pressStyle: PressStyle = MelodiaPress.Pill,
     animateColors: Boolean = true,
     activeColor: Color = MaterialTheme.colorScheme.primary,
-    inactiveColor: Color = FilterPillInactive,
+    inactiveColor: Color = AppSurfaceRaised,
     modifier: Modifier = Modifier
 ) {
     val targetBackground = if (selected) activeColor else inactiveColor
-    val targetContent = if (selected) MaterialTheme.colorScheme.onPrimary else Color.LightGray
+    val targetContent = if (selected) com.lin0721.linmusic.core.ui.theme.readableContentColor(activeColor) else AppTextSecondary
     // 动画值无条件求值，避免 animateColors 变化时组合槽位对不上
     val animatedBackground by animateColorAsState(targetValue = targetBackground, label = "pillBackground")
     val animatedContent by animateColorAsState(targetValue = targetContent, label = "pillContent")

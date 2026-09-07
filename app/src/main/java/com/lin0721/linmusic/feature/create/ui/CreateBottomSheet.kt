@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.create.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,14 +26,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lin0721.linmusic.core.ui.components.MelodiaTextButton
 import com.lin0721.linmusic.core.ui.components.MelodiaButton
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.BottomSheetShape
 import com.lin0721.linmusic.core.ui.theme.DragHandleShape
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
 import com.lin0721.linmusic.core.ui.theme.PillRadius
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
-import com.lin0721.linmusic.core.ui.theme.SurfaceLight
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppSurface
+import com.lin0721.linmusic.core.ui.theme.AppSurfaceRaised
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import org.koin.androidx.compose.koinViewModel
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 
@@ -81,7 +82,7 @@ fun CreatePopupMenu(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(PillRadius))
-            .background(SurfaceDark)
+            .background(AppSurface)
             .padding(vertical = MelodiaSpacing.sm)
     ) {
         CreateMenuItem(
@@ -133,13 +134,13 @@ private fun CreateMenuItem(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(SurfaceLight),
+                .background(AppSurfaceRaised),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White,
+                tint = AppText,
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -147,14 +148,14 @@ private fun CreateMenuItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = Color.White,
+                color = AppText,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = TextGray,
+                color = AppTextSecondary,
                 fontSize = 12.sp
             )
         }
@@ -173,14 +174,14 @@ private fun CreatePlaylistDialog(
 
     ModalBottomSheet(
         onDismissRequest = { if (!isCreating) onDismiss() },
-        containerColor = SurfaceDark,
+        containerColor = AppSurface,
         shape = BottomSheetShape,
         dragHandle = {
             Box(modifier = Modifier.padding(top = 12.dp, bottom = MelodiaSpacing.xs)) {
                 Surface(
                     modifier = Modifier.width(40.dp).height(4.dp),
                     shape = DragHandleShape,
-                    color = Color.White.copy(alpha = 0.3f)
+                    color = AppText.copy(alpha = 0.3f)
                 ) {}
             }
         }
@@ -194,7 +195,7 @@ private fun CreatePlaylistDialog(
         ) {
             Text(
                 text = "新建歌单",
-                color = Color.White,
+                color = AppText,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = MelodiaSpacing.md)
@@ -205,17 +206,17 @@ private fun CreatePlaylistDialog(
                     .fillMaxWidth()
                     .height(48.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(BackgroundDark)
+                    .background(AppBackground)
                     .padding(horizontal = 14.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 if (name.isEmpty()) {
-                    Text("我的新歌单", color = TextGray, fontSize = 15.sp)
+                    Text("我的新歌单", color = AppTextSecondary, fontSize = 15.sp)
                 }
                 BasicTextField(
                     value = name,
                     onValueChange = { name = it },
-                    textStyle = TextStyle(color = Color.White, fontSize = 15.sp),
+                    textStyle = TextStyle(color = AppText, fontSize = 15.sp),
                     cursorBrush = SolidColor(NeteaseRed),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -230,8 +231,8 @@ private fun CreatePlaylistDialog(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("设为隐私歌单", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text("仅自己可见", color = TextGray, fontSize = 12.sp)
+                    Text("设为隐私歌单", color = AppText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text("仅自己可见", color = AppTextSecondary, fontSize = 12.sp)
                 }
                 Switch(
                     checked = isPrivate,
@@ -240,7 +241,7 @@ private fun CreatePlaylistDialog(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = NeteaseRed,
                         uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = SurfaceLight
+                        uncheckedTrackColor = AppSurfaceRaised
                     )
                 )
             }
@@ -256,7 +257,7 @@ private fun CreatePlaylistDialog(
                     onClick = onDismiss,
                     enabled = !isCreating
                 ) {
-                    Text("取消", color = Color.White)
+                    Text("取消", color = AppText)
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 MelodiaButton(
@@ -268,7 +269,7 @@ private fun CreatePlaylistDialog(
                     if (isCreating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            color = Color.White,
+                            color = AppText,
                             strokeWidth = 2.dp
                         )
                     } else {

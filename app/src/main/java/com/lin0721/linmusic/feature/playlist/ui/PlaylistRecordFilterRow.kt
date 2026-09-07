@@ -1,5 +1,9 @@
 package com.lin0721.linmusic.feature.playlist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
+
+import com.lin0721.linmusic.core.ui.theme.AppText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -50,14 +54,14 @@ fun PlaylistRecordFilterRow(
                     }
                     .clip(RoundedCornerShape(PillRadius))
                     .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f)
+                        if (isSelected) MaterialTheme.colorScheme.primary else AppText.copy(alpha = 0.1f)
                     )
                     .padding(horizontal = 20.dp, vertical = MelodiaSpacing.sm),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = filter,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.LightGray,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else AppTextSecondary,
                     fontSize = 14.sp
                 )
             }

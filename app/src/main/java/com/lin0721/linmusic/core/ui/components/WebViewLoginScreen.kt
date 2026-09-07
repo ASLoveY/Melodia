@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.core.ui.components
 
+import com.lin0721.linmusic.core.ui.theme.AppAccent
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.webkit.CookieManager
@@ -26,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.lin0721.linmusic.core.ui.theme.BackgroundBlack
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
+import com.lin0721.linmusic.core.ui.theme.AppSurface
 import com.lin0721.linmusic.core.ui.theme.WebLoginBackground
 import com.lin0721.linmusic.core.network.NeteaseEndpoints
 
@@ -64,7 +65,7 @@ fun WebViewLoginScreen(
                         text = "安全授权登录",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = com.lin0721.linmusic.core.ui.theme.AppText
 					)
 				},
 				navigationIcon = {
@@ -72,12 +73,12 @@ fun WebViewLoginScreen(
 						Icon(
 							imageVector = Icons.Default.Close,
 							contentDescription = "关闭",
-							tint = Color.White
+							tint = com.lin0721.linmusic.core.ui.theme.AppText
 						)
 					}
 				},
 				colors = TopAppBarDefaults.topAppBarColors(
-					containerColor = BackgroundBlack
+					containerColor = com.lin0721.linmusic.core.ui.theme.AppBackground
 				)
 			)
 		},
@@ -164,7 +165,7 @@ fun WebViewLoginScreen(
 			) {
                 // 加载页背景也改成网页同款浅灰，保持视觉过渡一致
                 Box(modifier = Modifier.fillMaxSize().background(WebLoginBackground), contentAlignment = Alignment.Center) {
-					CircularProgressIndicator(color = NeteaseRed)
+					CircularProgressIndicator(color = AppAccent)
 				}
 			}
 		}

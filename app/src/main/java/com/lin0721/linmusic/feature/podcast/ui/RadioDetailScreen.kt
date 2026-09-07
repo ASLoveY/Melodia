@@ -52,9 +52,9 @@ import com.lin0721.linmusic.core.ui.components.CoverPlaceholder
 import com.lin0721.linmusic.core.ui.components.ToastManager
 import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.RadiusCompact
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.feature.home.ui.ErrorContent
 import com.lin0721.linmusic.feature.home.ui.LoadingIndicator
 import com.lin0721.linmusic.feature.podcast.domain.PodcastProgram
@@ -202,7 +202,7 @@ private fun RadioDetailHeader(
                             listOf(
                                 Color.Black.copy(alpha = 0.35f),
                                 Color.Black.copy(alpha = 0.55f),
-                                BackgroundDark
+                                AppBackground
                             )
                         )
                     )
@@ -227,7 +227,7 @@ private fun RadioDetailHeader(
                 }
                 Text(
                     text = detail.name,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold,
                     textAlign = TextAlign.Center,
@@ -249,7 +249,7 @@ private fun RadioDetailHeader(
                                 contentScale = ContentScale.Crop
                             )
                         }
-                        Text(text = detail.djName, color = Color(0xFFD8D8D8), fontSize = 12.sp)
+                        Text(text = detail.djName, color = AppTextSecondary, fontSize = 12.sp)
                     }
                 }
                 val stats = listOfNotNull(
@@ -260,7 +260,7 @@ private fun RadioDetailHeader(
                 if (stats.isNotBlank()) {
                     Text(
                         text = stats,
-                        color = TextGray,
+                        color = AppTextSecondary,
                         fontSize = 11.sp,
                         modifier = Modifier.padding(top = 5.dp)
                     )
@@ -286,12 +286,12 @@ private fun RadioDetailHeader(
                 Icon(
                     imageVector = Icons.Rounded.PlayArrow,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = "播放最新一期",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(start = 7.dp)
@@ -310,9 +310,9 @@ private fun RadioDetailHeader(
                     ) { onToggleSubscribe() }
                     .then(
                         if (detail.subscribed) {
-                            Modifier.border(1.dp, Color.White.copy(alpha = 0.28f), CircleShape)
+                            Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                         } else {
-                            Modifier.background(Color.White.copy(alpha = 0.14f))
+                            Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
                         }
                     )
                     .padding(horizontal = 18.dp),
@@ -327,7 +327,7 @@ private fun RadioDetailHeader(
                 } else {
                     Text(
                         text = if (detail.subscribed) "已订阅" else "订阅",
-                        color = if (detail.subscribed) Color(0xFFBDBDBD) else Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -338,7 +338,7 @@ private fun RadioDetailHeader(
         if (detail.desc.isNotBlank()) {
             Text(
                 text = detail.desc,
-                color = TextGray,
+                color = AppTextSecondary,
                 fontSize = 12.sp,
                 lineHeight = 20.sp,
                 maxLines = if (descExpanded) Int.MAX_VALUE else 2,
@@ -373,7 +373,7 @@ private fun RadioProgramRow(program: PodcastProgram, onClick: () -> Unit) {
     ) {
         Text(
             text = program.serialNum.takeIf { it > 0 }?.toString().orEmpty(),
-            color = TextGray,
+            color = AppTextSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
@@ -405,7 +405,7 @@ private fun RadioProgramRow(program: PodcastProgram, onClick: () -> Unit) {
             if (meta.isNotBlank()) {
                 Text(
                     text = meta,
-                    color = TextGray.copy(alpha = 0.75f),
+                    color = AppTextSecondary,
                     fontSize = 10.5.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

@@ -1,5 +1,8 @@
 package com.lin0721.linmusic.feature.settings.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+import com.lin0721.linmusic.core.ui.theme.AppAccent
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,9 +41,9 @@ import com.lin0721.linmusic.R
 import com.lin0721.linmusic.core.log.AppLogger
 import com.lin0721.linmusic.core.ui.components.ToastManager
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
-import com.lin0721.linmusic.core.ui.theme.SurfaceLight
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppSurface
+import com.lin0721.linmusic.core.ui.theme.AppSurfaceRaised
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 import com.lin0721.linmusic.core.update.UpdateManager
 import org.koin.compose.koinInject
@@ -74,8 +77,8 @@ fun AboutSettingsView(viewModel: SettingsViewModel) {
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text("Melodia Player", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text(appVersionLabel(), color = TextGray, fontSize = 13.sp)
+            Text("Melodia Player", color = AppText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(appVersionLabel(), color = AppTextSecondary, fontSize = 13.sp)
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -90,14 +93,14 @@ fun AboutSettingsView(viewModel: SettingsViewModel) {
                     subtitle = "前往 GitHub 获取最新安装包",
                     onClick = { updateManager.checkForUpdate(manual = true) }
                 )
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                 SettingsSwitchRow(
                     title = "自动检查更新",
                     subtitle = "启动应用时后台检查一次更新",
                     checked = autoCheckUpdateEnabled,
                     onCheckedChange = { viewModel.updateAutoCheckUpdateEnabled(it) }
                 )
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                 SettingsSwitchRow(
                     title = "接收测试版更新",
                     subtitle = "包含 beta/rc 预览版本，可能不稳定",
@@ -112,24 +115,24 @@ fun AboutSettingsView(viewModel: SettingsViewModel) {
                 Text(
                     text = "Melodia 是一款基于 Jetpack Compose 构建的第三方网易云音乐播放器。\n\n" +
                             "本项目基于开源协议发布。",
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = AppText,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Start,
                     lineHeight = 20.sp,
                     modifier = Modifier.padding(vertical = 12.dp)
                 )
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                 Column(modifier = Modifier.padding(vertical = 12.dp)) {
-                    Text("开源协议 (MIT LICENSE)", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text("开源协议 (MIT LICENSE)", color = AppText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files...",
-                        color = TextGray,
+                        color = AppTextSecondary,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Start,
                         lineHeight = 16.sp,
                         modifier = Modifier
-                            .background(SurfaceLight, RoundedCornerShape(8.dp))
+                            .background(AppSurfaceRaised, RoundedCornerShape(8.dp))
                             .padding(10.dp)
                     )
                 }
@@ -148,7 +151,7 @@ fun AboutSettingsView(viewModel: SettingsViewModel) {
                     subtitle = "当前: ${logLevelLabel(currentLogLevel)}，越详细越利于排查问题",
                     onClick = { showLogLevelDialog = true }
                 )
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                 SettingsRow(
                     title = "导出并分享日志",
                     subtitle = "当应用发生故障时，可将本地运行日志导出",
@@ -156,7 +159,7 @@ fun AboutSettingsView(viewModel: SettingsViewModel) {
                         exportAndShareLogs(context)
                     }
                 )
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                 SettingsRow(
                     title = "清空日志文件",
                     subtitle = "清除本地保存的运行日志，清空后将无法再导出",
@@ -172,7 +175,7 @@ fun AboutSettingsView(viewModel: SettingsViewModel) {
                 if (showLogLevelDialog) {
                     AlertDialog(
                         onDismissRequest = { showLogLevelDialog = false },
-                        title = { Text("日志级别", color = Color.White) },
+                        title = { Text("日志级别", color = AppText) },
                         text = {
                             Column {
                                 AppLogger.LogLevel.entries.forEach { level ->
@@ -193,22 +196,22 @@ fun AboutSettingsView(viewModel: SettingsViewModel) {
                                                 showLogLevelDialog = false
                                             },
                                             colors = RadioButtonDefaults.colors(
-                                                selectedColor = NeteaseRed,
-                                                unselectedColor = TextGray
+                                                selectedColor = AppAccent,
+                                                unselectedColor = AppTextSecondary
                                             )
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text(text = logLevelLabel(level), color = Color.White, fontSize = 16.sp)
+                                        Text(text = logLevelLabel(level), color = AppText, fontSize = 16.sp)
                                     }
                                 }
                             }
                         },
                         confirmButton = {
                             MelodiaTextButton(onClick = { showLogLevelDialog = false }) {
-                                Text("取消", color = NeteaseRed)
+                                Text("取消", color = AppAccent)
                             }
                         },
-                        containerColor = SurfaceDark
+                        containerColor = AppSurface
                     )
                 }
             }
@@ -226,7 +229,7 @@ fun AboutSettingsView(viewModel: SettingsViewModel) {
                             "• Koin\n" +
                             "• Coil\n" +
                             "• Haze",
-                    color = TextGray,
+                    color = AppTextSecondary,
                     fontSize = 13.sp,
                     textAlign = TextAlign.Start,
                     lineHeight = 20.sp,

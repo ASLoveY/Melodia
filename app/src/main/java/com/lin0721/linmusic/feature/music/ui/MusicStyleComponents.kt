@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,7 +41,7 @@ import com.lin0721.linmusic.core.ui.components.CoverPlaceholder
 import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.RadiusCompact
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.feature.music.domain.MusicStyle
 import com.lin0721.linmusic.feature.music.domain.StyleHead
 import com.lin0721.linmusic.feature.music.domain.StylePortrait
@@ -57,7 +58,7 @@ private val StyleHeaderHeight = 150.dp
 // 六位 hex 转 Color，脏值退回中性灰
 internal fun String?.toStyleColor(): Color {
     val hex = this ?: return FallbackStyleColor
-    return runCatching { Color(android.graphics.Color.parseColor("#$hex")) }.getOrDefault(FallbackStyleColor)
+    return runCatching { com.lin0721.linmusic.core.ui.theme.readableBackdrop(Color(android.graphics.Color.parseColor("#$hex"))) }.getOrDefault(FallbackStyleColor)
 }
 
 // 一级曲风胶囊。底色取服务端 colorDeep，未选中的压低透明度而不是换色，
@@ -116,7 +117,9 @@ private fun StyleChip(
     ) {
         Text(
             text = text,
-            color = if (selected) Color.White else Color.White.copy(alpha = 0.75f),
+            color = com.lin0721.linmusic.core.ui.theme.readableContentColor(
+                (if (selected) color else color.copy(alpha = 0.45f)).compositeOver(MaterialTheme.colorScheme.background)
+            ),
             fontSize = 12.5.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
         )
@@ -157,14 +160,14 @@ private fun SubStyleChip(text: String, selected: Boolean, onClick: () -> Unit) {
             .pressable(MelodiaPress.Pill) { onClick() }
             .clip(CircleShape)
             .then(
-                if (selected) Modifier.background(Color.White)
-                else Modifier.border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                if (selected) Modifier.background(MaterialTheme.colorScheme.primary)
+                else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
             )
             .padding(horizontal = 11.dp, vertical = 5.dp)
     ) {
         Text(
             text = text,
-            color = if (selected) Color(0xFF121212) else Color(0xFFBDBDBD),
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.5.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
         )
@@ -179,18 +182,18 @@ fun MusicPortraitCard(portrait: StylePortrait, accent: Color) {
             .fillMaxWidth()
             .padding(horizontal = MusicEdgePadding, vertical = 15.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.35f))))
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(16.dp)
     ) {
         Text(
             text = "你的曲风画像",
-            color = Color.White.copy(alpha = 0.82f),
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold
         )
         Text(
             text = portrait.content,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
             fontSize = 14.5.sp,
             lineHeight = 23.sp,
             fontWeight = FontWeight.Medium,
@@ -199,7 +202,7 @@ fun MusicPortraitCard(portrait: StylePortrait, accent: Color) {
         if (portrait.dataTip.isNotBlank()) {
             Text(
                 text = portrait.dataTip,
-                color = Color.White.copy(alpha = 0.58f),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 fontSize = 10.sp,
                 modifier = Modifier.padding(top = 10.dp)
             )
@@ -242,7 +245,7 @@ fun MusicPreferenceBars(preferences: List<StylePreference>) {
                 }
                 Text(
                     text = "${pref.ratio}%",
-                    color = TextGray,
+                    color = AppTextSecondary,
                     fontSize = 11.5.sp,
                     modifier = Modifier.width(40.dp).padding(start = 10.dp)
                 )
@@ -386,7 +389,7 @@ fun MusicFavouriteSongCard(track: Track, onClick: () -> Unit) {
             )
             Text(
                 text = track.ar.joinToString("/") { it.name },
-                color = TextGray,
+                color = AppTextSecondary,
                 fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

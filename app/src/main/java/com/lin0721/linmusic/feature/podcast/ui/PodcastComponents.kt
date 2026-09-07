@@ -36,7 +36,7 @@ import com.lin0721.linmusic.core.ui.components.CoverPlaceholder
 import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.RadiusCompact
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.feature.podcast.domain.PodcastCategory
 import com.lin0721.linmusic.feature.podcast.domain.PodcastProgram
 import com.lin0721.linmusic.feature.podcast.domain.PodcastRadio
@@ -69,7 +69,7 @@ fun PodcastSectionTitle(title: String, trailing: String? = null) {
             modifier = Modifier.weight(1f, fill = false)
         )
         trailing?.let {
-            Text(text = it, color = TextGray, fontSize = 11.5.sp, modifier = Modifier.padding(start = 8.dp))
+            Text(text = it, color = AppTextSecondary, fontSize = 11.5.sp, modifier = Modifier.padding(start = 8.dp))
         }
     }
 }
@@ -106,14 +106,14 @@ private fun CategoryChip(text: String, selected: Boolean, onClick: () -> Unit) {
             .pressable(MelodiaPress.Pill) { onClick() }
             .clip(CircleShape)
             .then(
-                if (selected) Modifier.background(Color.White)
-                else Modifier.border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                if (selected) Modifier.background(MaterialTheme.colorScheme.primary)
+                else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
             )
             .padding(horizontal = 12.dp, vertical = 5.dp)
     ) {
         Text(
             text = text,
-            color = if (selected) Color(0xFF121212) else Color(0xFFBDBDBD),
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.5.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
         )
@@ -159,7 +159,7 @@ fun PodcastProgramRow(
             if (source.isNotBlank()) {
                 Text(
                     text = source,
-                    color = TextGray,
+                    color = AppTextSecondary,
                     fontSize = 11.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -173,7 +173,7 @@ fun PodcastProgramRow(
             if (meta.isNotBlank()) {
                 Text(
                     text = meta,
-                    color = TextGray.copy(alpha = 0.75f),
+                    color = AppTextSecondary,
                     fontSize = 10.5.sp,
                     maxLines = 1,
                     modifier = Modifier.padding(top = 2.dp)
@@ -252,7 +252,7 @@ fun PodcastRadioRow(
                 if (meta.isNotBlank()) {
                     Text(
                         text = meta,
-                        color = TextGray,
+                        color = AppTextSecondary,
                         fontSize = 10.5.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

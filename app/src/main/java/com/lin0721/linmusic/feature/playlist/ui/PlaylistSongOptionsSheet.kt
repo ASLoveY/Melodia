@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.playlist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
@@ -101,7 +103,7 @@ fun PlaylistSongOptionsSheet(
             }
 
             HorizontalDivider(
-                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f),
+                color = com.lin0721.linmusic.core.ui.theme.AppText.copy(alpha = 0.08f),
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = MelodiaSpacing.sm)
             )
 

@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.core.ui.components
 
+import com.lin0721.linmusic.core.ui.theme.AppText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -43,9 +44,9 @@ import coil.compose.SubcomposeAsyncImage
 import com.lin0721.linmusic.Screen
 import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.core.ui.theme.extractBackdropPaletteFromUrl
 import com.lin0721.linmusic.core.ui.theme.PaletteMemoryCache
 import dev.chrisbanes.haze.HazeState
@@ -55,7 +56,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import com.lin0721.linmusic.core.ui.theme.FallbackBackdropPalette
-import com.lin0721.linmusic.core.ui.theme.NavPillSelected
+import com.lin0721.linmusic.core.ui.theme.AppSelected
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 import com.lin0721.linmusic.core.ui.theme.InfoCardRadius
 import com.lin0721.linmusic.core.ui.theme.RadiusCompact
@@ -73,7 +74,7 @@ private val MINI_PLAYER_BLUR_RADIUS = 28.dp
 //悬浮播放控制卡片
 
 @Composable
-fun MiniPlayerCard(
+private fun MiniPlayerCardContent(
     currentTrack: MediaItem?,
     isPlaying: Boolean,
     currentPositionProvider: () -> Long,
@@ -226,7 +227,7 @@ fun MiniPlayerCard(
                         Spacer(modifier = Modifier.height(1.dp))
                         Text(
                             text = artist,
-                            color = TextGray,
+                            color = AppTextSecondary,
                             fontSize = 12.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -302,7 +303,7 @@ fun MelodiaNavigationBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = BackgroundDark,
+        color = AppBackground,
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
@@ -342,25 +343,57 @@ fun MelodiaNavigationBar(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (isSelected) NavPillSelected else Color.Transparent)
+                            .background(if (isSelected) AppSelected else Color.Transparent)
                             .padding(horizontal = MelodiaSpacing.md, vertical = 1.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = icon,
                             contentDescription = label,
-                            tint = if (isSelected) Color.White else TextGray,
+                            tint = if (isSelected) AppText else AppTextSecondary,
                             modifier = Modifier.size(22.dp)
                         )
                     }
                     Text(
                         text = label,
-                        color = if (isSelected) Color.White else TextGray,
+                        color = if (isSelected) AppText else AppTextSecondary,
                         fontSize = 11.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }
         }
+    }
+}
+
+// Cover/video surfaces retain a dark local theme in either app appearance.
+@Composable
+fun MiniPlayerCard(
+    currentTrack: MediaItem?,
+    isPlaying: Boolean,
+    currentPositionProvider: () -> Long,
+    duration: Long,
+    onTogglePlay: () -> Unit,
+    onNext: () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    hazeState: HazeState? = null,
+    onDrag: ((Float) -> Unit)? = null,
+    onDragEnd: ((Float) -> Unit)? = null
+) {
+    com.lin0721.linmusic.core.ui.theme.MelodiaTheme(darkTheme = true) {
+        MiniPlayerCardContent(
+            currentTrack = currentTrack,
+            isPlaying = isPlaying,
+            currentPositionProvider = currentPositionProvider,
+            duration = duration,
+            onTogglePlay = onTogglePlay,
+            onNext = onNext,
+            onClick = onClick,
+            modifier = modifier,
+            hazeState = hazeState,
+            onDrag = onDrag,
+            onDragEnd = onDragEnd
+        )
     }
 }

@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.settings.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,9 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lin0721.linmusic.LocalBottomOverlayInset
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 
 @Composable
@@ -43,7 +44,7 @@ fun NetworkSettingsView(viewModel: SettingsViewModel) {
                     checked = wifiOnlyPlay,
                     onCheckedChange = { viewModel.updateWifiOnlyPlay(it) }
                 )
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                 SettingsSwitchRow(
                     title = "流量播放警告提示",
                     subtitle = "从 Wi-Fi 切换为移动数据时弹出提醒",
@@ -63,7 +64,7 @@ fun NetworkSettingsView(viewModel: SettingsViewModel) {
                 )
 
                 if (useRealIp) {
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -72,9 +73,9 @@ fun NetworkSettingsView(viewModel: SettingsViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = MelodiaSpacing.md)) {
-                            Text("真实 IP 地址", color = Color.White, fontSize = 15.sp)
+                            Text("真实 IP 地址", color = AppText, fontSize = 15.sp)
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text("可在此处输入国内 IP，不填写则为随机", color = TextGray, fontSize = 12.sp)
+                            Text("可在此处输入国内 IP，不填写则为随机", color = AppTextSecondary, fontSize = 12.sp)
                         }
 
                         Box(
@@ -82,17 +83,17 @@ fun NetworkSettingsView(viewModel: SettingsViewModel) {
                                 .width(150.dp)
                                 .height(36.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(BackgroundDark)
+                                .background(AppBackground)
                                 .padding(horizontal = 12.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             if (realIpValue.isEmpty()) {
-                                Text("IP 127.0.0.1", color = TextGray, fontSize = 13.sp)
+                                Text("IP 127.0.0.1", color = AppTextSecondary, fontSize = 13.sp)
                             }
                             BasicTextField(
                                 value = realIpValue,
                                 onValueChange = { viewModel.updateRealIpValue(it) },
-                                textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
+                                textStyle = TextStyle(color = AppText, fontSize = 13.sp),
                                 cursorBrush = SolidColor(NeteaseRed),
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true
@@ -101,7 +102,7 @@ fun NetworkSettingsView(viewModel: SettingsViewModel) {
                     }
                 }
 
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                HorizontalDivider(color = AppText.copy(alpha = 0.05f))
 
                 SettingsSwitchRow(
                     title = "使用代理服务器",

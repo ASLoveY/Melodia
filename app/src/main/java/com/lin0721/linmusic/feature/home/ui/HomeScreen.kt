@@ -48,6 +48,7 @@ fun HomeScreen(
     onRadioClick: (Long) -> Unit = {},
     onMvClick: (Long, String) -> Unit = { _, _ -> },
     onSearchClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     onOpenSidebar: () -> Unit = {},
     onLoginScreenVisibilityChanged: (Boolean) -> Unit = {}
 ) {
@@ -111,7 +112,8 @@ fun HomeScreen(
                 secondarySelected = showNewWorksFeed,
                 onSecondarySelected = { onShowNewWorksFeedChanged(true) },
                 onAvatarClick = onAvatarClick,
-                onSearchClick = onSearchClick
+                onSearchClick = onSearchClick,
+                onSettingsClick = onSettingsClick
             )
 
             Box(modifier = Modifier.weight(1f)) {

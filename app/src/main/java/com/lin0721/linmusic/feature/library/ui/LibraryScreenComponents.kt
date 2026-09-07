@@ -1,5 +1,9 @@
 package com.lin0721.linmusic.feature.library.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppSurfaceRaised
+
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -101,14 +105,14 @@ fun LibraryFilterPillsRow(
                         .animateItem(fadeInSpec, placementSpec, fadeOutSpec)
                         .pressable(MelodiaPress.Pill) { onClear() }
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(AppSurfaceRaised)
                         .size(36.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "清除筛选",
-                        tint = Color.LightGray,
+                        tint = AppTextSecondary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -117,12 +121,12 @@ fun LibraryFilterPillsRow(
         items(visibleFilters, key = { it.first }) { (filter, label) ->
             val isSelected = filter == selectedFilter
             val bgColor by animateColorAsState(
-                targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
+                targetValue = if (isSelected) MaterialTheme.colorScheme.primary else AppSurfaceRaised,
                 animationSpec = tween(220),
                 label = "pill_bg"
             )
             val contentColor by animateColorAsState(
-                targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.LightGray,
+                targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else AppTextSecondary,
                 animationSpec = tween(220),
                 label = "pill_content"
             )
@@ -148,12 +152,12 @@ fun LibraryFilterPillsRow(
             items(ownerFilters, key = { "owner_${it.first}" }) { (ownerFilter, label) ->
                 val isSelected = ownerFilter == selectedPlaylistOwnerFilter
                 val bgColor by animateColorAsState(
-                    targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
+                    targetValue = if (isSelected) MaterialTheme.colorScheme.primary else AppSurfaceRaised,
                     animationSpec = tween(220),
                     label = "owner_pill_bg"
                 )
                 val contentColor by animateColorAsState(
-                    targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.LightGray,
+                    targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else AppTextSecondary,
                     animationSpec = tween(220),
                     label = "owner_pill_content"
                 )

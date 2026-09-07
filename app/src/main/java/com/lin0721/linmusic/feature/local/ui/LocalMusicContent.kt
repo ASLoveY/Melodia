@@ -21,6 +21,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -404,16 +406,15 @@ fun LocalMusicList(
                 }
             }
         }
-        Box(Modifier.fillMaxWidth().height(32.dp)) {
-            if (!selectionActive) {
-                Text(
-                    stringResource(R.string.local_import_directory_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-        }
+        // Keep the measured hint space during drag selection, while allowing larger fonts and
+        // narrow screens to wrap instead of clipping the last line.
+        Text(
+            stringResource(R.string.local_import_directory_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (selectionActive) Color.Transparent else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().testTag("local_import_hint").padding(horizontal = 16.dp, vertical = 4.dp)
+                .then(if (selectionActive) Modifier.clearAndSetSemantics { } else Modifier)
+        )
         OutlinedTextField(
             value = query,
             onValueChange = onQuery,

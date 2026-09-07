@@ -1,5 +1,9 @@
 package com.lin0721.linmusic.core.ui.components
 
+import com.lin0721.linmusic.core.ui.theme.AppSurfaceRaised
+
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,13 +46,13 @@ fun FilterChipsRow(
                 modifier = Modifier
                     .pressable(MelodiaPress.Pill) { onSelected(index) }
                     .clip(RoundedCornerShape(PillRadius))
-                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f))
+                    .background(if (isSelected) MaterialTheme.colorScheme.primary else AppSurfaceRaised)
                     .padding(horizontal = 20.dp, vertical = MelodiaSpacing.sm),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = items[index],
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.LightGray,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else AppTextSecondary,
                     fontSize = 14.sp
                 )
             }

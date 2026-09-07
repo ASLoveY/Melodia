@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.listendata.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -52,7 +53,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import com.lin0721.linmusic.core.ui.components.CoverPlaceholder
 import com.lin0721.linmusic.core.ui.interaction.pressable
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.DataEnterStaggerFraction
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
@@ -67,8 +68,8 @@ import com.lin0721.linmusic.feature.listendata.domain.toHours
 import com.lin0721.linmusic.feature.listendata.domain.toHoursText
 
 private val CardShape = RoundedCornerShape(10.dp)
-private val CardColor = Color.White.copy(alpha = 0.06f)
-private val TrackColor = Color.White.copy(alpha = 0.06f)
+private val CardColor: Color @Composable get() = MaterialTheme.colorScheme.surfaceContainer
+private val TrackColor: Color @Composable get() = MaterialTheme.colorScheme.surfaceVariant
 // 柱体最高值，横轴标签的高度由 Row 自适应撑开，不能并进固定高度里
 private val BarMaxHeight = 72.dp
 private val BarMinHeight = 3.dp
@@ -184,10 +185,10 @@ private fun BoxScope.CoverWall(urls: List<String>) {
             .background(
                 Brush.verticalGradient(
                     // 顶部收进底色接住药丸行，中段留出封面色调，底部实色收尾接下方卡片
-                    0f to BackgroundDark.copy(alpha = 0.95f),
-                    0.35f to BackgroundDark.copy(alpha = 0.86f),
-                    0.8f to BackgroundDark.copy(alpha = 0.93f),
-                    1f to BackgroundDark
+                    0f to AppBackground.copy(alpha = 0.95f),
+                    0.35f to AppBackground.copy(alpha = 0.86f),
+                    0.8f to AppBackground.copy(alpha = 0.93f),
+                    1f to AppBackground
                 )
             )
     )
@@ -761,7 +762,7 @@ fun FriendsSection(friends: List<FriendListening>, keywords: List<String>) {
                     maxLines = 1,
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(AppText.copy(alpha = 0.08f))
                         .padding(horizontal = MelodiaSpacing.sm + MelodiaSpacing.xs, vertical = 5.dp)
                 )
             }

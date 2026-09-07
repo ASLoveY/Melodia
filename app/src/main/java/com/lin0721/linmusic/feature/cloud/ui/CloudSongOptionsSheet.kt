@@ -1,5 +1,8 @@
 package com.lin0721.linmusic.feature.cloud.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+import com.lin0721.linmusic.core.ui.theme.AppAccent
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,12 +40,12 @@ import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import com.lin0721.linmusic.core.ui.components.CoverPlaceholder
 import com.lin0721.linmusic.core.ui.components.MelodiaDragHandle
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.BottomSheetShape
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
 import com.lin0721.linmusic.core.ui.theme.RadiusCompact
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.feature.cloud.domain.CloudSong
 import kotlinx.coroutines.launch
 
@@ -64,7 +67,7 @@ fun CloudSongOptionsSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = BackgroundDark,
+        containerColor = AppBackground,
         shape = BottomSheetShape,
         dragHandle = { MelodiaDragHandle() }
     ) {
@@ -92,7 +95,7 @@ fun CloudSongOptionsSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = song.name,
-                        color = Color.White,
+                        color = AppText,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -100,7 +103,7 @@ fun CloudSongOptionsSheet(
                     )
                     Text(
                         text = song.artist,
-                        color = TextGray,
+                        color = AppTextSecondary,
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -110,7 +113,7 @@ fun CloudSongOptionsSheet(
             }
 
             HorizontalDivider(
-                color = Color.White.copy(alpha = 0.08f),
+                color = AppText.copy(alpha = 0.08f),
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = MelodiaSpacing.sm)
             )
 
@@ -129,11 +132,11 @@ fun CloudSongOptionsSheet(
                 Icon(
                     imageVector = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     contentDescription = null,
-                    tint = if (isLiked) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f)
+                    tint = if (isLiked) MaterialTheme.colorScheme.primary else AppText
                 )
                 Text(
                     text = if (isLiked) "取消喜欢" else "喜欢",
-                    color = Color.White,
+                    color = AppText,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(start = 16.dp)
                 )
@@ -151,10 +154,10 @@ fun CloudSongOptionsSheet(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
+                Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = null, tint = AppText)
                 Text(
                     text = "添加到歌单",
-                    color = Color.White,
+                    color = AppText,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(start = 16.dp)
                 )
@@ -172,10 +175,10 @@ fun CloudSongOptionsSheet(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
+                Icon(Icons.Rounded.Refresh, contentDescription = null, tint = AppText)
                 Text(
                     text = "重新匹配",
-                    color = Color.White,
+                    color = AppText,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(start = 16.dp)
                 )
@@ -193,10 +196,10 @@ fun CloudSongOptionsSheet(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Rounded.DeleteOutline, contentDescription = null, tint = NeteaseRed)
+                Icon(Icons.Rounded.DeleteOutline, contentDescription = null, tint = AppAccent)
                 Text(
                     text = "删除",
-                    color = NeteaseRed,
+                    color = AppAccent,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(start = 16.dp)
                 )

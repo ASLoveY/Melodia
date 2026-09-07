@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.core.ui.components
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 
 // 侧边栏二级页通用脚手架：返回箭头 + 标题的顶栏，内容区由各页自行填充
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,7 +37,7 @@ fun SecondaryScreenScaffold(
                         text = title,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = AppText
                     )
                 },
                 navigationIcon = {
@@ -43,14 +45,14 @@ fun SecondaryScreenScaffold(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回",
-                            tint = Color.White
+                            tint = AppText
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppBackground)
             )
         },
-        containerColor = BackgroundDark
+        containerColor = AppBackground
     ) { innerPadding ->
         Column(
             modifier = Modifier

@@ -51,7 +51,7 @@ fun SongInfo(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = artist,
-                color = TextGray.copy(alpha = 0.7f),
+                color = TextGray,
                 fontSize = 15.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

@@ -39,8 +39,8 @@ fun ArtistNameSection(artist: ArtistDetailInfo, progress: Float, tintColor: Colo
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.6f)
+                            Color.Black.copy(alpha = 0.55f),
+                            Color.Black.copy(alpha = 0.7f)
                         )
                     )
                 )
@@ -49,7 +49,7 @@ fun ArtistNameSection(artist: ArtistDetailInfo, progress: Float, tintColor: Colo
         ) {
             Text(
                 text = artist.name,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Color.White,
                 fontSize = 44.sp,
                 fontWeight = FontWeight.Black,
                 lineHeight = 48.sp,
@@ -66,7 +66,7 @@ fun ArtistNameSection(artist: ArtistDetailInfo, progress: Float, tintColor: Colo
             if (!chineseName.isNullOrBlank()) {
                 Text(
                     text = chineseName,
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )

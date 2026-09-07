@@ -37,7 +37,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FullPlayerScreen(
+private fun FullPlayerScreenContent(
     currentTrack: MediaItem?,
     isPlaying: Boolean,
     currentPositionProvider: () -> Long,
@@ -432,6 +432,38 @@ fun FullPlayerScreen(
             onCommentsDismiss = { showCommentsSheet = false },
             onOutputDeviceSelected = { deviceId -> viewModel.playerManager.setPreferredAudioDevice(deviceId) },
             onOutputDeviceDismiss = { showOutputDeviceSheet = false }
+        )
+    }
+}
+
+// Cover/video surfaces retain a dark local theme in either app appearance.
+@Composable
+fun FullPlayerScreen(
+    currentTrack: MediaItem?,
+    isPlaying: Boolean,
+    currentPositionProvider: () -> Long,
+    duration: Long,
+    onTogglePlay: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onClose: () -> Unit,
+    isPlayerOpen: Boolean,
+    onArtistClick: (Long) -> Unit,
+    onAlbumClick: (Long) -> Unit,
+    onDragClose: (Float, Float) -> Unit = { _, _ -> }
+) {
+    com.lin0721.linmusic.core.ui.theme.MelodiaTheme(darkTheme = true) {
+        FullPlayerScreenContent(
+            currentTrack = currentTrack,
+            isPlaying = isPlaying,
+            currentPositionProvider = currentPositionProvider,
+            duration = duration,
+            onTogglePlay = onTogglePlay,
+            onSeek = onSeek,
+            onClose = onClose,
+            isPlayerOpen = isPlayerOpen,
+            onArtistClick = onArtistClick,
+            onAlbumClick = onAlbumClick,
+            onDragClose = onDragClose
         )
     }
 }

@@ -1,5 +1,8 @@
 package com.lin0721.linmusic.feature.settings.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+import com.lin0721.linmusic.core.ui.theme.AppAccent
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,8 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lin0721.linmusic.core.ui.components.MelodiaTextButton
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppSurface
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.core.update.UpdateUiState
 
 // 全局更新弹窗，跟随 UpdateManager 的状态在"发现更新/下载中/下载完成/下载失败"间切换展示
@@ -47,13 +50,13 @@ fun UpdateDialog(
         onDismissRequest = { if (!isDownloading) onDismiss() },
         title = {
             val channelSuffix = if (info.isPrerelease) "（测试版）" else ""
-            Text("发现新版本 ${info.versionName}$channelSuffix", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("发现新版本 ${info.versionName}$channelSuffix", color = AppText, fontWeight = FontWeight.Bold)
         },
         text = {
             Column {
                 Text(
                     text = info.changelog.ifBlank { "暂无更新说明" },
-                    color = TextGray,
+                    color = AppTextSecondary,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,
                     modifier = Modifier
@@ -66,18 +69,18 @@ fun UpdateDialog(
                         LinearProgressIndicator(
                             progress = { state.progress / 100f },
                             modifier = Modifier.fillMaxWidth(),
-                            color = NeteaseRed
+                            color = AppAccent
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("下载中 ${state.progress}%", color = TextGray, fontSize = 12.sp)
+                        Text("下载中 ${state.progress}%", color = AppTextSecondary, fontSize = 12.sp)
                     }
                     is UpdateUiState.DownloadFailed -> {
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(state.message, color = NeteaseRed, fontSize = 12.sp)
+                        Text(state.message, color = AppAccent, fontSize = 12.sp)
                     }
                     is UpdateUiState.ReadyToInstall -> {
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("下载完成，点击安装", color = TextGray, fontSize = 12.sp)
+                        Text("下载完成，点击安装", color = AppTextSecondary, fontSize = 12.sp)
                     }
                     else -> Unit
                 }
@@ -99,20 +102,20 @@ fun UpdateDialog(
                     is UpdateUiState.Downloading -> "下载中..."
                     else -> "立即更新"
                 }
-                Text(label, color = NeteaseRed, fontWeight = FontWeight.Bold)
+                Text(label, color = AppAccent, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             Row {
                 MelodiaTextButton(enabled = !isDownloading, onClick = onIgnore) {
-                    Text("忽略此版本", color = TextGray)
+                    Text("忽略此版本", color = AppTextSecondary)
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 MelodiaTextButton(enabled = !isDownloading, onClick = onDismiss) {
-                    Text("稍后", color = Color.White)
+                    Text("稍后", color = AppText)
                 }
             }
         },
-        containerColor = SurfaceDark
+        containerColor = AppSurface
     )
 }

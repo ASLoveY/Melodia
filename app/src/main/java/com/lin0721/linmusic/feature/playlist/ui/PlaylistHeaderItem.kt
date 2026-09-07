@@ -24,6 +24,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -92,7 +94,10 @@ fun PlaylistHeaderItem(
         modifier = Modifier
             .fillMaxWidth()
             // 使用从封面提取的主色调渐变到背景黑
-            .background(Brush.verticalGradient(listOf(dominantColor, MaterialTheme.colorScheme.background)))
+            .background(Brush.verticalGradient(listOf(
+                if (MaterialTheme.colorScheme.background.luminance() > 0.5f) lerp(dominantColor, Color.White, 0.92f) else dominantColor,
+                MaterialTheme.colorScheme.background
+            )))
     ) {
         // 封面：与操作区的返回键水平对齐
         Box(

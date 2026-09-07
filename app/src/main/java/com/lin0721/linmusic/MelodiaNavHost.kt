@@ -41,6 +41,7 @@ fun MelodiaNavHost(
     onHomeTabSelected: (Int) -> Unit,
     onShowMusicNewWorksChanged: (Boolean) -> Unit,
     onNavigateToSearch: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     onBack: () -> Unit
 ) {
     AnimatedContent(
@@ -79,6 +80,7 @@ fun MelodiaNavHost(
                     onRadioClick = onNavigateToRadio,
                     onMvClick = onNavigateToMv,
                     onSearchClick = onNavigateToSearch,
+                    onSettingsClick = onNavigateToSettings,
                     onOpenSidebar = onOpenSidebar,
                     onLoginScreenVisibilityChanged = onLoginScreenVisibilityChanged
                 )

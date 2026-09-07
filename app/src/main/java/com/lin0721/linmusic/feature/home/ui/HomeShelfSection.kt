@@ -39,7 +39,7 @@ import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.RadiusCompact
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.feature.home.domain.HomeCard
 import com.lin0721.linmusic.feature.home.domain.HomeShelf
 
@@ -167,7 +167,7 @@ private fun HomeShelfCard(
                     Icon(
                         imageVector = Icons.Rounded.PlayArrow,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -187,7 +187,7 @@ private fun HomeShelfCard(
         if (card.caption.isNotBlank()) {
             Text(
                 text = card.caption,
-                color = TextGray,
+                color = AppTextSecondary,
                 fontSize = 11.5.sp,
                 lineHeight = 15.sp,
                 maxLines = 2,

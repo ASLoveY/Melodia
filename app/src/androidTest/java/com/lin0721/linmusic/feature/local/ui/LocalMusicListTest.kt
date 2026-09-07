@@ -1,6 +1,12 @@
 package com.lin0721.linmusic.feature.local.ui
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,6 +31,25 @@ import org.junit.Rule
 import org.junit.Test
 
 class LocalMusicListTest {
+    @Test
+    fun importHintIsNotClippedOnNarrowScreens() {
+        composeRule.setContent {
+            com.lin0721.linmusic.core.ui.theme.MelodiaTheme(darkTheme = true) {
+                LocalMusicList(
+                    tracks = emptyList(), totalCount = 0, query = "", sort = LocalMusicSort.RECENT,
+                    importing = false, error = null, playingId = null, isPlaying = false,
+                    onQuery = {}, onSort = {}, onImport = {}, onPlay = {}, onRemove = {},
+                    modifier = Modifier.width(320.dp)
+                )
+            }
+        }
+        val layouts = mutableListOf<TextLayoutResult>()
+        composeRule.onNodeWithTag("local_import_hint").performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
+            it(layouts)
+        }
+        assertTrue(layouts.isNotEmpty())
+        assertTrue(layouts.none { it.didOverflowHeight || it.didOverflowWidth })
+    }
 
     @get:Rule
     val composeRule = createComposeRule()

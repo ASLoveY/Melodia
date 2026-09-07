@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.playlist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -56,24 +58,24 @@ fun SearchBarItem(
                     .weight(1f)
                     .height(SearchBarHeight)
                     .clip(RoundedCornerShape(RadiusCompact))
-                    .background(Color.White.copy(alpha = 0.12f)),
+                    .background(AppText.copy(alpha = 0.12f)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Spacer(Modifier.width(14.dp))
-                Icon(Icons.Default.Search, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Search, null, tint = AppText, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(MelodiaSpacing.sm))
                 androidx.compose.foundation.text.BasicTextField(
                     value         = query,
                     onValueChange = onQueryChange,
                     singleLine    = true,
                     textStyle     = androidx.compose.ui.text.TextStyle(
-                        color    = Color.White,
+                        color    = AppText,
                         fontSize = 14.sp
                     ),
-                    cursorBrush = SolidColor(Color.White),
+                    cursorBrush = SolidColor(AppText),
                     decorationBox = { inner ->
                         Box(contentAlignment = Alignment.CenterStart) {
-                            if (query.isEmpty()) Text("在歌单中搜索", color = Color.White, fontSize = 14.sp)
+                            if (query.isEmpty()) Text("在歌单中搜索", color = AppText, fontSize = 14.sp)
                             inner()
                         }
                     },
@@ -88,14 +90,14 @@ fun SearchBarItem(
                 modifier = Modifier
                     .height(SearchBarHeight)
                     .clip(RoundedCornerShape(RadiusCompact))
-                    .background(Color.White.copy(alpha = 0.12f))
+                    .background(AppText.copy(alpha = 0.12f))
                     .clickable { showSortSheet = true }
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "排序",
-                    color = Color.White,
+                    color = AppText,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )

@@ -28,6 +28,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.material3.MaterialTheme
+import com.lin0721.linmusic.core.ui.theme.SystemBarAppearance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToDown
@@ -43,7 +46,7 @@ import com.lin0721.linmusic.core.ui.components.ToastManager
 import com.lin0721.linmusic.core.ui.components.WebViewLoginScreen
 import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.update.UpdateManager
 import com.lin0721.linmusic.core.update.UpdateUiState
 import com.lin0721.linmusic.core.preferences.SettingsPreferences
@@ -83,6 +86,10 @@ fun MelodiaApp() {
     var isLoginScreenVisible by remember { mutableStateOf(false) }
     // MV 播放页是否处于全屏态：全屏时隐藏底部导航栏/悬浮播放条，避免盖住视频
     var isMvFullscreen by remember { mutableStateOf(false) }
+    SystemBarAppearance(
+        darkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f || playerSheet.isOpen ||
+            isMvFullscreen || navigation.currentScreen == Screen.MvPlayer
+    )
     // 悬浮播放卡片 + 导航栏的实际高度，下发给各页面用作列表底部留白
     var bottomOverlayHeight by remember { mutableStateOf(0.dp) }
 
@@ -153,7 +160,7 @@ fun MelodiaApp() {
                 orientation = Orientation.Horizontal,
                 enabled = isDrawerDraggable
             )
-            .background(BackgroundDark)
+            .background(AppBackground)
     ) {
         // 1. 侧边栏层 (位于最底层或同步移动)
         userProfile?.let { profile ->
@@ -192,7 +199,7 @@ fun MelodiaApp() {
                     shape = RoundedCornerShape((sidebar.progress * 32).dp)
                     shadowElevation = (sidebar.progress * 30f)
                 }
-                .background(BackgroundDark)
+                .background(AppBackground)
         ) {
             CompositionLocalProvider(LocalBottomOverlayInset provides bottomOverlayHeight) {
                 Box(
@@ -224,6 +231,7 @@ fun MelodiaApp() {
                         onHomeTabSelected = { navigation.selectHomeTab(it) },
                         onShowMusicNewWorksChanged = { navigation.updateShowMusicNewWorks(it) },
                         onNavigateToSearch = { navigation.openSearch(autoFocus = true) },
+                        onNavigateToSettings = { navigation.navigateTo(Screen.Settings) },
                         onBack = { navigation.navigateBack() }
                     )
 
@@ -372,7 +380,7 @@ fun MelodiaApp() {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(BackgroundDark)
+                    .background(AppBackground)
                     .pressable(MelodiaPress.None) {},
                 contentAlignment = Alignment.Center
             ) {

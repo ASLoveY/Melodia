@@ -118,7 +118,7 @@ private data class GestureFeedback(val icon: ImageVector, val fraction: Float)
 // MV 播放页：YouTube 式观看页——非全屏时视频区固定在顶部，下方是可滚动的信息面板（歌手/播放量/点赞收藏分享/评论/该歌手更多MV）；
 // 转横屏或点击全屏按钮进入沉浸式全屏播放（手势/自定义控制层不依赖 media3-ui）
 @Composable
-fun ArtistMvPlayerScreen(
+private fun ArtistMvPlayerScreenContent(
     mvId: Long,
     mvName: String,
     viewModel: ArtistMvPlayerViewModel = koinViewModel(),
@@ -1034,4 +1034,28 @@ private fun formatMvTime(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%d:%02d".format(minutes, seconds)
+}
+
+// Cover/video surfaces retain a dark local theme in either app appearance.
+@Composable
+fun ArtistMvPlayerScreen(
+    mvId: Long,
+    mvName: String,
+    viewModel: ArtistMvPlayerViewModel = koinViewModel(),
+    onBack: () -> Unit,
+    onArtistClick: (Long) -> Unit,
+    onMvClick: (Long, String) -> Unit,
+    onFullscreenChanged: (Boolean) -> Unit
+) {
+    com.lin0721.linmusic.core.ui.theme.MelodiaTheme(darkTheme = true) {
+        ArtistMvPlayerScreenContent(
+            mvId = mvId,
+            mvName = mvName,
+            viewModel = viewModel,
+            onBack = onBack,
+            onArtistClick = onArtistClick,
+            onMvClick = onMvClick,
+            onFullscreenChanged = onFullscreenChanged
+        )
+    }
 }

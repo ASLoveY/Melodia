@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.player.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppAccent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
@@ -99,7 +100,7 @@ fun PlayQueueSheet(
                         onClearQueue()
                         showClearConfirmDialog = false
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = NeteaseRed)
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppAccent)
                 ) {
                     Text("是的", fontWeight = FontWeight.Bold)
                 }
@@ -418,7 +419,7 @@ private fun PlayModeInfoRow(
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = NeteaseRed, modifier = Modifier.size(16.dp))
+            Icon(icon, contentDescription = null, tint = AppAccent, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text(label, color = Color.White, fontSize = 12.sp)
         }

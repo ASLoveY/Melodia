@@ -137,7 +137,7 @@ fun SleepTimerSheet(
                     Icon(
                         imageVector = Icons.Rounded.ChevronRight,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.3f),
+                        tint = Color.White.copy(alpha = 0.82f),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -194,7 +194,7 @@ fun SleepTimerSheet(
                         Spacer(modifier = Modifier.width(MelodiaSpacing.sm))
                         Text(
                             text = "时",
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = Color.White.copy(alpha = 0.82f),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = MelodiaSpacing.xs)
@@ -204,7 +204,7 @@ fun SleepTimerSheet(
 
                     Text(
                         text = ":",
-                        color = Color.White.copy(alpha = 0.2f),
+                        color = Color.White.copy(alpha = 0.82f),
                         fontSize = 36.sp,
                         fontWeight = FontWeight.Light,
                         modifier = Modifier.padding(bottom = 6.dp)
@@ -225,7 +225,7 @@ fun SleepTimerSheet(
                         Spacer(modifier = Modifier.width(MelodiaSpacing.sm))
                         Text(
                             text = "分",
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = Color.White.copy(alpha = 0.82f),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = MelodiaSpacing.xs)

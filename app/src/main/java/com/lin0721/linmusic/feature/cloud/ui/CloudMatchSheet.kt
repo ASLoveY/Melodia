@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.cloud.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+import com.lin0721.linmusic.core.ui.theme.AppAccent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -49,13 +51,13 @@ import com.lin0721.linmusic.core.ui.components.EmptyState
 import com.lin0721.linmusic.core.ui.components.MelodiaDragHandle
 import com.lin0721.linmusic.core.ui.components.MelodiaTextButton
 import com.lin0721.linmusic.core.ui.components.PlaceholderTextField
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.BottomSheetShape
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
 import com.lin0721.linmusic.core.ui.theme.RadiusCompact
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppSurface
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 
 private val ResultsMaxHeight = 360.dp
 
@@ -88,7 +90,7 @@ fun CloudMatchSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = BackgroundDark,
+        containerColor = AppBackground,
         shape = BottomSheetShape,
         dragHandle = { MelodiaDragHandle() }
     ) {
@@ -100,7 +102,7 @@ fun CloudMatchSheet(
         ) {
             Text(
                 text = "重新匹配「${overlay.song.name}」",
-                color = Color.White,
+                color = AppText,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = MelodiaSpacing.sm)
             )
@@ -164,11 +166,11 @@ fun CloudMatchSheet(
     if (confirmTarget != null) {
         AlertDialog(
             onDismissRequest = { if (!overlay.isMatching) onCancelConfirm() },
-            title = { Text("确认匹配", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("确认匹配", color = AppText, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
                     "确定要把「${overlay.song.name}」关联到「${confirmTarget.name}」吗？",
-                    color = TextGray,
+                    color = AppTextSecondary,
                     fontSize = 14.sp
                 )
             },
@@ -176,17 +178,17 @@ fun CloudMatchSheet(
                 MelodiaTextButton(
                     onClick = onConfirm,
                     enabled = !overlay.isMatching,
-                    colors = ButtonDefaults.textButtonColors(contentColor = NeteaseRed)
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppAccent)
                 ) {
                     Text(if (overlay.isMatching) "匹配中..." else "是的", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 MelodiaTextButton(onClick = onCancelConfirm, enabled = !overlay.isMatching) {
-                    Text("取消", color = Color.White)
+                    Text("取消", color = AppText)
                 }
             },
-            containerColor = SurfaceDark,
+            containerColor = AppSurface,
             shape = RoundedCornerShape(10.dp)
         )
     }
@@ -212,7 +214,7 @@ private fun MatchCandidateRow(track: Track, onClick: () -> Unit) {
         Column(modifier = Modifier.padding(start = MelodiaSpacing.sm).weight(1f)) {
             Text(
                 text = track.name,
-                color = Color.White,
+                color = AppText,
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.artist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -62,7 +63,7 @@ fun ArtistActionBar(
         ) {
             Text(
                 text = "共有 ${formatFansCount(fansCount)} 位听众",
-                color = Color.White.copy(alpha = 0.6f),
+                color = AppText,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -78,7 +79,7 @@ fun ArtistActionBar(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+                        .border(1.dp, AppText.copy(alpha = 0.2f), CircleShape)
                 )
 
                 Spacer(Modifier.width(12.dp))
@@ -92,7 +93,7 @@ fun ArtistActionBar(
                             onClick = onFollowClick
                         )
                         .border(
-                            border = if (isFollowed) BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+                            border = if (isFollowed) BorderStroke(1.dp, AppText.copy(alpha = 0.4f))
                             else BorderStroke(0.dp, Color.Transparent),
                             shape = RoundedCornerShape(PillRadius)
                         )
@@ -101,7 +102,7 @@ fun ArtistActionBar(
                 ) {
                     Text(
                         text = if (isFollowed) "已关注" else "关注",
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = if (isFollowed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )

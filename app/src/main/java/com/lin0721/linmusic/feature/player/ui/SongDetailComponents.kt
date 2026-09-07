@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.player.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppAccent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -78,7 +79,7 @@ fun SongDetailCard(
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
-                        color = NeteaseRed,
+                        color = AppAccent,
                         modifier = Modifier.size(24.dp),
                         strokeWidth = 2.dp
                     )
@@ -204,7 +205,7 @@ private fun SongCreatorsSheet(
                 ) {
                     Text(
                         text = role.roleName,
-                        color = TextGray.copy(alpha = 0.6f),
+                        color = TextGray,
                         fontSize = 14.sp,
                         modifier = Modifier.width(70.dp)
                     )
@@ -238,7 +239,7 @@ fun SongDetailRow(
     ) {
         Text(
             text = label,
-            color = TextGray.copy(alpha = 0.6f),
+            color = TextGray,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
             modifier = Modifier.width(70.dp)
@@ -258,7 +259,7 @@ fun SongDetailRow(
             Icon(
                 imageVector = Icons.Rounded.KeyboardArrowRight,
                 contentDescription = null,
-                tint = TextGray.copy(alpha = 0.5f),
+                tint = TextGray,
                 modifier = Modifier
                     .size(20.dp)
                     .padding(start = MelodiaSpacing.xs)
@@ -302,7 +303,7 @@ fun SimilarArtistsCard(
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
-                        color = NeteaseRed,
+                        color = AppAccent,
                         modifier = Modifier.size(24.dp),
                         strokeWidth = 2.dp
                     )

@@ -33,7 +33,7 @@ import com.lin0721.linmusic.core.ui.components.CoverPlaceholder
 import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.RadiusCompact
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.feature.music.domain.StyleArtistItem
 import com.lin0721.linmusic.feature.music.domain.StylePlaylistItem
 
@@ -57,7 +57,7 @@ fun MusicSectionTitle(title: String, trailing: String? = null) {
             modifier = Modifier.weight(1f, fill = false)
         )
         trailing?.let {
-            Text(text = it, color = TextGray, fontSize = 11.5.sp, modifier = Modifier.padding(start = 8.dp))
+            Text(text = it, color = AppTextSecondary, fontSize = 11.5.sp, modifier = Modifier.padding(start = 8.dp))
         }
     }
 }
@@ -91,7 +91,7 @@ fun MusicPlaylistRow(playlists: List<StylePlaylistItem>, onClick: (StylePlaylist
                 )
                 Text(
                     text = item.playCount.toPlayCountText(),
-                    color = TextGray,
+                    color = AppTextSecondary,
                     fontSize = 11.sp,
                     maxLines = 1,
                     modifier = Modifier.padding(top = 2.dp)
@@ -115,7 +115,7 @@ fun MusicSongList(songs: List<Track>, onPlayAt: (Int) -> Unit) {
             ) {
                 Text(
                     text = "${index + 1}",
-                    color = TextGray,
+                    color = AppTextSecondary,
                     fontSize = 12.sp,
                     modifier = Modifier.width(18.dp)
                 )
@@ -138,7 +138,7 @@ fun MusicSongList(songs: List<Track>, onPlayAt: (Int) -> Unit) {
                     )
                     Text(
                         text = track.ar.joinToString("/") { it.name },
-                        color = TextGray,
+                        color = AppTextSecondary,
                         fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -181,7 +181,7 @@ fun MusicArtistRow(artists: List<StyleArtistItem>, onClick: (StyleArtistItem) ->
                 if (item.musicSize > 0) {
                     Text(
                         text = "${item.musicSize} 首",
-                        color = TextGray,
+                        color = AppTextSecondary,
                         fontSize = 10.sp,
                         maxLines = 1
                     )

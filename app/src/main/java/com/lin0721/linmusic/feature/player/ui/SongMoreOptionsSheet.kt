@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.player.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppAccent
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -255,7 +256,7 @@ fun SongMoreOptionsSheet(
                         ) {
                             Text(
                                 text = "VIP",
-                                color = NeteaseRed,
+                                color = AppAccent,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -321,7 +322,7 @@ fun SongMoreOptionsSheet(
                                 ) {
                                     Text(
                                         text = label,
-                                        color = if (isSelected) NeteaseRed else Color.White,
+                                        color = if (isSelected) AppAccent else Color.White,
                                         fontSize = 15.sp,
                                         modifier = Modifier.weight(1f)
                                     )
@@ -329,7 +330,7 @@ fun SongMoreOptionsSheet(
                                         Icon(
                                             imageVector = Icons.Rounded.Check,
                                             contentDescription = null,
-                                            tint = NeteaseRed,
+                                            tint = AppAccent,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }

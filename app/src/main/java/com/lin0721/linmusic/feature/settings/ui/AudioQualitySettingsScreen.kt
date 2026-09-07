@@ -1,5 +1,9 @@
 package com.lin0721.linmusic.feature.settings.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppAccent
+
+import com.lin0721.linmusic.core.ui.theme.AppText
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,7 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lin0721.linmusic.LocalBottomOverlayInset
 import com.lin0721.linmusic.core.model.getQualityDisplayName
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
+import com.lin0721.linmusic.core.ui.theme.AppSurface
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 
 @Composable
@@ -42,7 +46,7 @@ fun AudioQualitySettingsView(viewModel: SettingsViewModel) {
                     subtitle = getQualityDisplayName(wifiQuality),
                     onClick = { qualityDialogTarget = "wifi" }
                 )
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                 SettingsRow(
                     title = "移动网络环境播放音质",
                     subtitle = getQualityDisplayName(mobileQuality),
@@ -68,7 +72,7 @@ fun AudioQualitySettingsView(viewModel: SettingsViewModel) {
         Dialog(onDismissRequest = { qualityDialogTarget = null }) {
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = SurfaceDark,
+                color = AppSurface,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = MelodiaSpacing.md)
@@ -79,7 +83,7 @@ fun AudioQualitySettingsView(viewModel: SettingsViewModel) {
                 ) {
                     Text(
                         text = if (isWifi) "选择 Wi-Fi 播放音质" else "选择移动网络播放音质",
-                        color = Color.White,
+                        color = AppText,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = MelodiaSpacing.sm)
@@ -104,9 +108,9 @@ fun AudioQualitySettingsView(viewModel: SettingsViewModel) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(label, color = if (isSelected) NeteaseRed else Color.White, fontSize = 15.sp)
+                            Text(label, color = if (isSelected) AppAccent else AppText, fontSize = 15.sp)
                             if (isSelected) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = NeteaseRed)
+                                Icon(Icons.Default.Check, contentDescription = null, tint = AppAccent)
                             }
                         }
                     }

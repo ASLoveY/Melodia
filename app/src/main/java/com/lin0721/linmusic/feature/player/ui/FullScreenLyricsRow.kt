@@ -50,7 +50,7 @@ fun FullScreenLyricsRow(
 
     val targetAlpha = if (isCurrent) 1f
                       else if (isCenterTarget) 0.85f
-                      else (0.65f - distance * 0.08f).coerceAtLeast(0.2f)
+                      else (0.88f - distance * 0.025f).coerceAtLeast(0.72f)
     val animatedAlpha by animateFloatAsState(
         targetValue = targetAlpha,
         animationSpec = tween(250),
@@ -76,7 +76,7 @@ fun FullScreenLyricsRow(
             KaraokeLyricRow(
                 line = line,
                 currentPositionProvider = currentPositionProvider,
-                inactiveColor = Color.White.copy(alpha = 0.35f),
+                inactiveColor = Color.White.copy(alpha = 0.8f),
                 activeColor = Color.White,
                 fontSize = 22.sp
              )

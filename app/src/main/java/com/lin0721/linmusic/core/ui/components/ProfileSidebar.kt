@@ -1,5 +1,8 @@
 package com.lin0721.linmusic.core.ui.components
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+import com.lin0721.linmusic.core.ui.theme.AppAccent
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,9 +32,9 @@ import com.lin0721.linmusic.core.auth.UserProfile
 import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.interaction.pressScale
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
-import com.lin0721.linmusic.core.ui.theme.BackgroundDark
+import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 import com.lin0721.linmusic.core.ui.theme.PillRadiusLarge
 
@@ -52,7 +55,7 @@ fun ProfileSidebar(
         modifier = Modifier
             .fillMaxHeight()
             .width(310.dp)
-            .background(BackgroundDark)
+            .background(AppBackground)
             .statusBarsPadding() // 避开状态栏
     ) {
         // 1. 头部：用户资料区
@@ -81,21 +84,21 @@ fun ProfileSidebar(
                     text = userProfile.nickname,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = AppText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "查看个人资料",
                     fontSize = 13.sp,
-                    color = TextGray
+                    color = AppTextSecondary
                 )
             }
         }
 
         // 极细分割线
         HorizontalDivider(
-            color = Color.White.copy(alpha = 0.1f),
+            color = AppText.copy(alpha = 0.1f),
             thickness = 1.dp,
             modifier = Modifier.padding(horizontal = 20.dp)
         )
@@ -158,13 +161,13 @@ fun ProfileSidebar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
                         contentDescription = null,
-                        tint = NeteaseRed,
+                        tint = AppAccent,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "退出登录",
-                        color = NeteaseRed,
+                        color = AppAccent,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -192,13 +195,13 @@ private fun SidebarMenuItem(
         Icon(
             imageVector = icon,
             contentDescription = title,
-            tint = Color.White,
+            tint = AppText,
             modifier = Modifier.size(26.dp) // 微调图标尺寸
         )
         Spacer(modifier = Modifier.width(20.dp))
         Text(
             text = title,
-            color = Color.White,
+            color = AppText,
             fontSize = 16.sp,
             fontWeight = FontWeight.Normal,
             letterSpacing = 0.5.sp, // 稍微拉开字间距
@@ -207,7 +210,7 @@ private fun SidebarMenuItem(
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = null,
-            tint = TextGray,
+            tint = AppTextSecondary,
             modifier = Modifier.size(20.dp)
         )
     }

@@ -190,7 +190,7 @@ private fun CenterTargetLine(visible: Boolean, modifier: Modifier = Modifier) {
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawLine(
-                color = Color.White.copy(alpha = 0.2f),
+                color = Color.White.copy(alpha = 0.82f),
                 start = Offset(0f, 0f),
                 end = Offset(size.width, 0f),
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f),

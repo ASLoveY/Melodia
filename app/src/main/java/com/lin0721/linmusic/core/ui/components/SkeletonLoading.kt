@@ -34,7 +34,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
-import com.lin0721.linmusic.core.ui.theme.SurfaceLight
+import com.lin0721.linmusic.core.ui.theme.AppSurfaceRaised
 
 // 扫光骨架屏背景：surfaceVariant/surface 之间无限循环平移渐变，贴合项目深色低调基调
 @Composable
@@ -66,7 +66,7 @@ fun CoverPlaceholder(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SurfaceLight),
+            .background(AppSurfaceRaised),
         contentAlignment = Alignment.Center
     ) {
         Icon(

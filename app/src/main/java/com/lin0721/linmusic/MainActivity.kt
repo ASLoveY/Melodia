@@ -9,6 +9,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.lin0721.linmusic.core.player.FloatingLyricService
@@ -42,9 +45,13 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        setContent {
-            MelodiaTheme {
-                MelodiaApp()
+        lifecycleScope.launch {
+            val initialTheme = settingsPreferences.themeMode.first()
+            setContent {
+                val mode by settingsPreferences.themeMode.collectAsStateWithLifecycle(initialValue = initialTheme)
+                MelodiaTheme(darkTheme = mode.usesDarkTheme(isSystemInDarkTheme())) {
+                    MelodiaApp()
+                }
             }
         }
     }

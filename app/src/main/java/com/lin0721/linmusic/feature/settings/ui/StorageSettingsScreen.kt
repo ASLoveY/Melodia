@@ -1,5 +1,8 @@
 package com.lin0721.linmusic.feature.settings.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+import com.lin0721.linmusic.core.ui.theme.AppAccent
+
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,8 +22,8 @@ import com.lin0721.linmusic.core.ui.components.MelodiaTextButton
 import com.lin0721.linmusic.LocalBottomOverlayInset
 import com.lin0721.linmusic.R
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppSurface
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 
 @Composable
@@ -54,17 +57,17 @@ fun StorageSettingsView(viewModel: SettingsViewModel, context: Context) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("清理应用缓存", color = Color.White, fontSize = 15.sp)
-                            Text(stringResource(R.string.cache_clear_description), color = TextGray, fontSize = 12.sp)
+                            Text("清理应用缓存", color = AppText, fontSize = 15.sp)
+                            Text(stringResource(R.string.cache_clear_description), color = AppTextSecondary, fontSize = 12.sp)
                         }
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
                             contentDescription = null,
-                            tint = NeteaseRed
+                            tint = AppAccent
                         )
                     }
 
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    HorizontalDivider(color = AppText.copy(alpha = 0.05f))
 
                     // 缓存大小上限设置行
                     Row(
@@ -76,12 +79,12 @@ fun StorageSettingsView(viewModel: SettingsViewModel, context: Context) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("最大音频缓存上限", color = Color.White, fontSize = 15.sp)
-                            Text("当前上限: $currentSizeStr", color = TextGray, fontSize = 12.sp)
+                            Text("最大音频缓存上限", color = AppText, fontSize = 15.sp)
+                            Text("当前上限: $currentSizeStr", color = AppTextSecondary, fontSize = 12.sp)
                         }
                         Text(
                             text = "修改",
-                            color = NeteaseRed,
+                            color = AppAccent,
                             fontSize = 14.sp
                         )
                     }
@@ -93,7 +96,7 @@ fun StorageSettingsView(viewModel: SettingsViewModel, context: Context) {
         if (showDialog) {
             AlertDialog(
                 onDismissRequest = { showDialog = false },
-                title = { Text("最大音频缓存上限", color = Color.White) },
+                title = { Text("最大音频缓存上限", color = AppText) },
                 text = {
                     Column {
                         val options = listOf(
@@ -120,22 +123,22 @@ fun StorageSettingsView(viewModel: SettingsViewModel, context: Context) {
                                         showDialog = false
                                     },
                                     colors = RadioButtonDefaults.colors(
-                                        selectedColor = NeteaseRed,
-                                        unselectedColor = TextGray
+                                        selectedColor = AppAccent,
+                                        unselectedColor = AppTextSecondary
                                     )
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = label, color = Color.White, fontSize = 16.sp)
+                                Text(text = label, color = AppText, fontSize = 16.sp)
                             }
                         }
                     }
                 },
                 confirmButton = {
                     MelodiaTextButton(onClick = { showDialog = false }) {
-                        Text("取消", color = NeteaseRed)
+                        Text("取消", color = AppAccent)
                     }
                 },
-                containerColor = SurfaceDark
+                containerColor = AppSurface
             )
         }
 
@@ -147,7 +150,7 @@ fun StorageSettingsView(viewModel: SettingsViewModel, context: Context) {
                     .clickable(enabled = false) {},
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = NeteaseRed)
+                CircularProgressIndicator(color = AppAccent)
             }
         }
     }

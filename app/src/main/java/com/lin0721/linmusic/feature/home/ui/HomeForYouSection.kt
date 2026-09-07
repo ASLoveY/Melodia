@@ -161,7 +161,7 @@ fun ForYouSection(
                         .size(EntryCardSize)
                         .pressable(MelodiaPress.Card) { entry.onClick() }
                         .clip(RoundedCornerShape(PillRadius))
-                        .background(Brush.linearGradient(entry.gradient))
+                        .background(Brush.linearGradient(entry.gradient.map { com.lin0721.linmusic.core.ui.theme.readableBackdrop(it) }))
                 ) {
                     // 左上打一束高光，纯色块不至于平成一张色纸
                     Box(
@@ -208,7 +208,7 @@ fun ForYouSection(
                             )
                             Text(
                                 text = entry.subtitle,
-                                color = Color.White.copy(alpha = 0.75f),
+                                color = Color.White,
                                 fontSize = 10.5.sp,
                                 lineHeight = 13.sp,
                                 maxLines = 2,

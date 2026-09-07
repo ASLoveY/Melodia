@@ -17,6 +17,7 @@ private val Context.settingsDataStore by preferencesDataStore(name = "settings_p
 class SettingsPreferences(private val context: Context) {
 
     companion object {
+        private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         // Wi-Fi 播放音质 KEY，默认 "lossless"
         private val KEY_WIFI_QUALITY = stringPreferencesKey("wifi_quality")
         // 移动网络播放音质 KEY，默认 "standard"
@@ -63,6 +64,14 @@ class SettingsPreferences(private val context: Context) {
         private val KEY_ALLOW_PRERELEASE_CHANNEL = booleanPreferencesKey("allow_prerelease_channel")
         // 用户主动忽略的更新版本 tag，默认空串表示未忽略任何版本
         private val KEY_IGNORED_UPDATE_TAG = stringPreferencesKey("ignored_update_tag")
+    }
+
+    val themeMode: Flow<AppThemeMode> = context.settingsDataStore.data.map { prefs ->
+        AppThemeMode.fromStored(prefs[KEY_THEME_MODE])
+    }
+
+    suspend fun saveThemeMode(mode: AppThemeMode) {
+        context.settingsDataStore.edit { it[KEY_THEME_MODE] = mode.name }
     }
 
     // Wi-Fi 音质设置 Flow

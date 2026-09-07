@@ -57,7 +57,7 @@ private fun extractBackdropPalette(drawable: android.graphics.drawable.Drawable)
             bitmap, EXTRACTION_BITMAP_SIZE, EXTRACTION_BITMAP_SIZE, true
         )
         val palette = Palette.from(normalized).generate()
-        val base = pickBaseColor(palette)
+        val base = readableBackdrop(pickBaseColor(palette))
         PlayerBackdropPalette(base, lerp(base, Color.White, 0.85f))
     } catch (e: Exception) {
         AppLogger.d(TAG, "取色失败，使用默认深灰色板", e)

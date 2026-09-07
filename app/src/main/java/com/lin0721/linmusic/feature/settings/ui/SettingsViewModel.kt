@@ -48,6 +48,16 @@ class SettingsViewModel(
         viewModelScope.launch { block() }
     }
 
+    val themeMode = settingsPreferences.themeMode.asState(com.lin0721.linmusic.core.preferences.AppThemeMode.SYSTEM)
+
+    fun updateThemeMode(mode: com.lin0721.linmusic.core.preferences.AppThemeMode) {
+        viewModelScope.launch {
+            try { settingsPreferences.saveThemeMode(mode) }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { _toastEvent.emit("主题保存失败，请重试") }
+        }
+    }
+
     // ─── 本地偏好设置对外状态流 ───
     val wifiQuality = settingsPreferences.wifiQuality.asState("lossless")
 

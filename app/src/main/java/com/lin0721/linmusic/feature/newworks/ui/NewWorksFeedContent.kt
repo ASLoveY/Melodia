@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.newworks.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppAccent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -379,7 +380,7 @@ private fun ReleaseGridCard(release: NewWorksRelease, onClick: () -> Unit) {
         Spacer(Modifier.height(4.dp))
         Text(
             text = if (release.isAlbum) "共 ${release.trackCount} 首" else "单曲",
-            color = if (isBulky) NeteaseRed.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (isBulky) AppAccent else MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 8.sp,
             modifier = Modifier
                 .clip(RoundedCornerShape(4.dp))

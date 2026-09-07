@@ -32,6 +32,7 @@ import com.lin0721.linmusic.core.ui.theme.*
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 // 定义多级菜单类型
 enum class SettingsSubMenu(val title: String) {
@@ -73,7 +74,7 @@ fun SettingsScreen(
                         text = activeSubMenu?.title ?: "设置",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = AppText
                     )
                 },
                 navigationIcon = {
@@ -89,16 +90,16 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回",
-                            tint = Color.White
+                            tint = AppText
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = BackgroundDark
+                    containerColor = AppBackground
                 )
             )
         },
-        containerColor = BackgroundDark
+        containerColor = AppBackground
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -148,6 +149,7 @@ private fun MainSettingsMenu(
     onBack: () -> Unit,
     viewModel: SettingsViewModel
 ) {
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -155,6 +157,7 @@ private fun MainSettingsMenu(
         verticalArrangement = Arrangement.spacedBy(MelodiaSpacing.md),
         contentPadding = PaddingValues(bottom = LocalBottomOverlayInset.current + 16.dp, top = 8.dp)
     ) {
+        item { ThemeSettingsContent(themeMode, viewModel::updateThemeMode) }
         // 多级设置菜单入口组
         item {
             SettingsGroupCard("常规设置") {
@@ -166,7 +169,7 @@ private fun MainSettingsMenu(
                         onClick = { onNavigate(item) }
                     )
                     if (index < availableMenus.lastIndex) {
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                        HorizontalDivider(color = AppText.copy(alpha = 0.05f))
                     }
                 }
             }
@@ -201,13 +204,13 @@ private fun MainSettingsMenu(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Logout,
                             contentDescription = null,
-                            tint = NeteaseRed,
+                            tint = AppAccent,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "退出登录",
-                            color = NeteaseRed,
+                            color = AppAccent,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -253,7 +256,7 @@ fun SettingsGroupCard(
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = title,
-            color = TextGray,
+            color = AppTextSecondary,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = MelodiaSpacing.xs, bottom = MelodiaSpacing.sm)
@@ -261,7 +264,7 @@ fun SettingsGroupCard(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = SurfaceDark
+            color = AppSurface
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = MelodiaSpacing.md, vertical = MelodiaSpacing.xs)
@@ -287,16 +290,16 @@ fun SettingsRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = MelodiaSpacing.sm)) {
-            Text(title, color = Color.White, fontSize = 15.sp)
+            Text(title, color = AppText, fontSize = 15.sp)
             if (subtitle.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(subtitle, color = TextGray, fontSize = 12.sp)
+                Text(subtitle, color = AppTextSecondary, fontSize = 12.sp)
             }
         }
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = null,
-            tint = TextGray
+            tint = AppTextSecondary
         )
     }
 }
@@ -316,10 +319,10 @@ fun SettingsSwitchRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = MelodiaSpacing.md)) {
-            Text(title, color = Color.White, fontSize = 15.sp)
+            Text(title, color = AppText, fontSize = 15.sp)
             if (subtitle.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(subtitle, color = TextGray, fontSize = 12.sp)
+                Text(subtitle, color = AppTextSecondary, fontSize = 12.sp)
             }
         }
         Switch(
@@ -328,8 +331,8 @@ fun SettingsSwitchRow(
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = NeteaseRed,
-                uncheckedThumbColor = TextGray,
-                uncheckedTrackColor = SurfaceLight
+                uncheckedThumbColor = AppTextSecondary,
+                uncheckedTrackColor = AppSurfaceRaised
             )
         )
     }

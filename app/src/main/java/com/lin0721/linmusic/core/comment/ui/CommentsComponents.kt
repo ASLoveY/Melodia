@@ -1,5 +1,8 @@
 package com.lin0721.linmusic.core.comment.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+import com.lin0721.linmusic.core.ui.theme.AppAccent
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,8 +34,8 @@ import com.lin0721.linmusic.core.ui.theme.BottomSheetShape
 import com.lin0721.linmusic.core.ui.theme.DragHandleShape
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
 import com.lin0721.linmusic.core.ui.theme.InfoCardRadius
-import com.lin0721.linmusic.core.ui.theme.SurfaceDark
-import com.lin0721.linmusic.core.ui.theme.TextGray
+import com.lin0721.linmusic.core.ui.theme.AppSurface
+import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 
 @Composable
@@ -63,19 +66,19 @@ fun CommentsPreviewCard(
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.Comment,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = AppText,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = "评论",
-                        color = Color.White,
+                        color = AppText,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     if (commentsState is CommentsState.Success) {
                         Text(
                             text = "(${commentsState.total})",
-                            color = TextGray.copy(alpha = 0.8f),
+                            color = AppTextSecondary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -94,7 +97,7 @@ fun CommentsPreviewCard(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            color = NeteaseRed,
+                            color = AppAccent,
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 2.dp
                         )
@@ -110,13 +113,13 @@ fun CommentsPreviewCard(
                     ) {
                         Text(
                             text = "加载评论失败: ${commentsState.message}",
-                            color = TextGray,
+                            color = AppTextSecondary,
                             fontSize = 14.sp,
                             textAlign = TextAlign.Center
                         )
                         MelodiaTextButton(
                             onClick = onRetry,
-                            colors = ButtonDefaults.textButtonColors(contentColor = NeteaseRed)
+                            colors = ButtonDefaults.textButtonColors(contentColor = AppAccent)
                         ) {
                             Text("重试", fontWeight = FontWeight.Bold)
                         }
@@ -130,7 +133,7 @@ fun CommentsPreviewCard(
                     if (allComments.isEmpty()) {
                         Text(
                             text = "暂无评论",
-                            color = TextGray,
+                            color = AppTextSecondary,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(vertical = MelodiaSpacing.md)
                         )
@@ -147,7 +150,7 @@ fun CommentsPreviewCard(
                                 )
                                 if (index < allComments.size - 1) {
                                     HorizontalDivider(
-                                        color = Color.White.copy(alpha = 0.08f),
+                                        color = AppText.copy(alpha = 0.08f),
                                         thickness = 0.5.dp
                                     )
                                 }
@@ -157,7 +160,7 @@ fun CommentsPreviewCard(
 
                             Text(
                                 text = "查看全部 ${commentsState.total} 条评论",
-                                color = NeteaseRed,
+                                color = AppAccent,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
@@ -202,7 +205,7 @@ fun CommentRowItem(
                 Column(modifier = Modifier.weight(1f).padding(end = MelodiaSpacing.sm)) {
                     Text(
                         text = comment.user.nickname,
-                        color = Color.White.copy(alpha = 0.9f),
+                        color = AppText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -211,7 +214,7 @@ fun CommentRowItem(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = comment.timeStr ?: "",
-                        color = TextGray.copy(alpha = 0.6f),
+                        color = AppTextSecondary,
                         fontSize = 10.sp
                     )
                 }
@@ -232,13 +235,13 @@ fun CommentRowItem(
                 ) {
                     Text(
                         text = formatLikedCount(comment.likedCount),
-                        color = if (comment.liked) NeteaseRed else TextGray.copy(alpha = 0.8f),
+                        color = if (comment.liked) AppAccent else AppTextSecondary,
                         fontSize = 11.sp
                     )
                     Icon(
                         imageVector = Icons.Rounded.ThumbUp,
                         contentDescription = null,
-                        tint = if (comment.liked) NeteaseRed else TextGray.copy(alpha = 0.6f),
+                        tint = if (comment.liked) AppAccent else AppTextSecondary,
                         modifier = Modifier.size(13.dp)
                     )
                 }
@@ -248,7 +251,7 @@ fun CommentRowItem(
 
             Text(
                 text = comment.content,
-                color = Color.White.copy(alpha = 0.95f),
+                color = AppText,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 maxLines = contentMaxLines,
@@ -287,14 +290,14 @@ fun CommentsBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceDark,
+        containerColor = AppSurface,
         shape = BottomSheetShape,
         dragHandle = {
             Box(modifier = Modifier.padding(top = 12.dp, bottom = MelodiaSpacing.xs)) {
                 Surface(
                     modifier = Modifier.width(40.dp).height(4.dp),
                     shape = DragHandleShape,
-                    color = Color.White.copy(alpha = 0.3f)
+                    color = AppText.copy(alpha = 0.3f)
                 ) {}
             }
         }
@@ -308,7 +311,7 @@ fun CommentsBottomSheet(
         ) {
             Text(
                 text = "评论",
-                color = Color.White,
+                color = AppText,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
                 modifier = Modifier.padding(bottom = MelodiaSpacing.md)
@@ -322,7 +325,7 @@ fun CommentsBottomSheet(
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = NeteaseRed)
+                        CircularProgressIndicator(color = AppAccent)
                     }
                 }
                 is CommentsState.Error -> {
@@ -335,7 +338,7 @@ fun CommentsBottomSheet(
                     ) {
                         Text(
                             text = "加载失败: ${commentsState.message}",
-                            color = TextGray,
+                            color = AppTextSecondary,
                             fontSize = 14.sp,
                             textAlign = TextAlign.Center
                         )
@@ -344,7 +347,7 @@ fun CommentsBottomSheet(
                             onClick = onRetry,
                             colors = ButtonDefaults.buttonColors(containerColor = NeteaseRed)
                         ) {
-                            Text("重试", color = Color.White)
+                            Text("重试", color = AppText)
                         }
                     }
                 }
@@ -361,7 +364,7 @@ fun CommentsBottomSheet(
                         ) {
                             Text(
                                 text = "暂无评论",
-                                color = TextGray,
+                                color = AppTextSecondary,
                                 fontSize = 14.sp
                             )
                         }

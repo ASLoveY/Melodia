@@ -89,7 +89,7 @@ fun FullPlayerCoverArt(
                 }
                 Text(
                     text = sourceText,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = Color.White.copy(alpha = 0.82f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,

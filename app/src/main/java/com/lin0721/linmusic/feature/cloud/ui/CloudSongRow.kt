@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.cloud.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,7 +76,7 @@ fun CloudSongRow(
         Column(modifier = Modifier.padding(start = MelodiaSpacing.sm).weight(1f)) {
             Text(
                 text = song.name,
-                color = Color.White,
+                color = AppText,
                 fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
