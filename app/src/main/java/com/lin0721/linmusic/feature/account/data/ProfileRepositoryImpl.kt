@@ -2,6 +2,7 @@ package com.lin0721.linmusic.feature.account.data
 
 import com.lin0721.linmusic.core.network.apiFlow
 import com.lin0721.linmusic.core.network.AppError
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import com.lin0721.linmusic.feature.account.domain.UserProfileDetails
 import kotlinx.coroutines.flow.Flow
 
@@ -9,10 +10,10 @@ class ProfileRepositoryImpl(
     private val apiService: ProfileApi
 ) : ProfileRepository {
 
-    override fun getProfile(uid: Long): Flow<Result<UserProfileDetails>> = apiFlow(
+    override fun getProfile(uid: Long, sessionTag: UserSessionTag?): Flow<Result<UserProfileDetails>> = apiFlow(
         request = {
             require(uid > 0L) { "user id must be positive" }
-            apiService.getProfile(uid)
+            apiService.getProfile(uid, sessionTag = sessionTag)
         },
         isSuccess = { it.isSuccess },
         code = { it.code },
@@ -35,19 +36,21 @@ class ProfileRepositoryImpl(
     override fun updateProfile(
         profile: UserProfileDetails,
         nickname: String,
-        signature: String
+        signature: String,
+        sessionTag: UserSessionTag
     ): Flow<Result<Unit>> = apiFlow(
         request = {
             check(profile.isEditable) { "profile is missing fields required for update" }
             apiService.updateProfile(
-                ProfileUpdateRequest(
+                body = ProfileUpdateRequest(
                     nickname = nickname,
                     signature = signature,
                     gender = checkNotNull(profile.gender),
                     birthday = checkNotNull(profile.birthday),
                     province = checkNotNull(profile.province),
                     city = checkNotNull(profile.city)
-                )
+                ),
+                sessionTag = sessionTag
             )
         },
         isSuccess = { it.isSuccess },

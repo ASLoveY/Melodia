@@ -1,6 +1,7 @@
 package com.lin0721.linmusic.feature.account.data
 
 import com.lin0721.linmusic.core.model.EmptyBody
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import com.lin0721.linmusic.core.network.AppError
 import com.lin0721.linmusic.feature.account.domain.UserProfileDetails
 import java.io.IOException
@@ -15,9 +16,9 @@ private class FakeProfileApi(
     private val detail: suspend (Long) -> ProfileDetailResponse = { error("detail not used") },
     private val update: suspend (ProfileUpdateRequest) -> ProfileUpdateResponse = { error("update not used") }
 ) : ProfileApi {
-    override suspend fun getProfile(uid: Long, body: EmptyBody): ProfileDetailResponse = detail(uid)
+    override suspend fun getProfile(uid: Long, body: EmptyBody, sessionTag: UserSessionTag?): ProfileDetailResponse = detail(uid)
 
-    override suspend fun updateProfile(body: ProfileUpdateRequest): ProfileUpdateResponse = update(body)
+    override suspend fun updateProfile(body: ProfileUpdateRequest, sessionTag: UserSessionTag): ProfileUpdateResponse = update(body)
 }
 
 class ProfileRepositoryImplTest {
@@ -33,7 +34,7 @@ class ProfileRepositoryImplTest {
             })
         )
 
-        val result = repository.updateProfile(profile, nickname = "新昵称", signature = "新签名").first()
+        val result = repository.updateProfile(profile, nickname = "新昵称", signature = "新签名", sessionTag = testSession).first()
 
         assertTrue(result.isSuccess)
         assertEquals("新昵称", request?.nickname)
@@ -56,7 +57,7 @@ class ProfileRepositoryImplTest {
         )
 
         assertFalse(incomplete.isEditable)
-        val result = repository.updateProfile(incomplete, nickname = "新昵称", signature = "新签名").first()
+        val result = repository.updateProfile(incomplete, nickname = "新昵称", signature = "新签名", sessionTag = testSession).first()
 
         assertTrue(result.isFailure)
         assertFalse(called)
@@ -107,7 +108,7 @@ class ProfileRepositoryImplTest {
             FakeProfileApi(update = { ProfileUpdateResponse(code = 400, message = "invalid") })
         )
 
-        val error = repository.updateProfile(completeProfile(), "新昵称", "新签名")
+        val error = repository.updateProfile(completeProfile(), "新昵称", "新签名", testSession)
             .first()
             .exceptionOrNull()
 
@@ -146,4 +147,8 @@ class ProfileRepositoryImplTest {
         province = 110000,
         city = 110101
     )
+
+    private companion object {
+        val testSession = UserSessionTag(uid = 42L, revision = 1L)
+    }
 }

@@ -35,6 +35,7 @@ fun FullPlayerTopBar(
     onTogglePlay: () -> Unit = {},
     isLiked: Boolean = false,
     onToggleLike: () -> Unit = {},
+    showLike: Boolean = true,
     backgroundColor: Color = Color.Transparent,
     onArtistClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -83,13 +84,15 @@ fun FullPlayerTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(MelodiaSpacing.sm)
             ) {
-                MelodiaIconButton(onClick = onToggleLike) {
-                    Icon(
-                        if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
+                if (showLike) {
+                    MelodiaIconButton(onClick = onToggleLike) {
+                        Icon(
+                            if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
                 }
                 MelodiaIconButton(onClick = onTogglePlay) {
                     Icon(

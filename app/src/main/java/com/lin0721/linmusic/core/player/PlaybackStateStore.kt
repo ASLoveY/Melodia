@@ -28,22 +28,29 @@ class PlaybackStateStore(
     // 从持久化状态重建上次播放的曲目，无历史记录时返回 null
     suspend fun loadLastTrack(): RestoredTrack? {
         val lastState = preferences.playbackState.first()
-        if (lastState.songId == -1L) return null
+        val mediaId = lastState.mediaId
+            ?: lastState.localUri?.let { "local:$it" }
+            ?: lastState.songId.takeIf { it > 0L }?.toString()
+            ?: return null
+        if (mediaId.startsWith("local:") && lastState.localUri.isNullOrBlank()) return null
 
         val bundle = Bundle().apply { putLong("songId", lastState.songId) }
+        lastState.localUri?.let { bundle.putString("localUri", it) }
         val metadata = MediaMetadata.Builder()
             .setTitle(lastState.title)
             .setArtist(lastState.artist)
-            .setArtworkUri(Uri.parse(lastState.coverUrl))
+            .apply {
+                if (lastState.coverUrl.isNotBlank()) setArtworkUri(Uri.parse(lastState.coverUrl))
+            }
             .setExtras(bundle)
             .build()
 
-        val mediaItem = MediaItem.Builder()
-            .setMediaId(lastState.songId.toString())
+        val mediaItemBuilder = MediaItem.Builder()
+            .setMediaId(mediaId)
             .setMediaMetadata(metadata)
-            .build()
+        lastState.localUri?.let { mediaItemBuilder.setUri(it) }
 
-        return RestoredTrack(mediaItem, lastState.lastPositionMs)
+        return RestoredTrack(mediaItemBuilder.build(), lastState.lastPositionMs)
     }
 
     fun savePlayMode(mode: PlayMode) {

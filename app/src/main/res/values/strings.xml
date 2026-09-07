@@ -33,4 +33,22 @@
     <string name="profile_discard_message">返回后，本次未保存的昵称和签名修改会被清除。</string>
     <string name="profile_discard">放弃修改</string>
     <string name="profile_continue_editing">继续编辑</string>
+    <string name="library_online_music">在线音乐</string>
+    <string name="local_music_title">本地音乐</string>
+    <string name="local_track_count">%1$d 首歌曲</string>
+    <string name="local_import">导入音乐</string>
+    <string name="local_importing">正在导入</string>
+    <string name="local_import_result">已导入 %1$d 首，重复 %2$d 首，失败 %3$d 首</string>
+    <string name="local_import_failed">导入未完成，请重新选择音频文件</string>
+    <string name="local_load_failed">读取本地音乐库失败，请重新打开后重试</string>
+    <string name="local_search">搜索本地歌曲、歌手或专辑</string>
+    <string name="local_empty">选择设备上的音频文件，离线也能播放</string>
+    <string name="local_no_results">没有找到匹配的本地音乐</string>
+    <string name="local_sort_recent">最近导入</string>
+    <string name="local_sort_title">歌曲名称</string>
+    <string name="local_sort_artist">歌手名称</string>
+    <string name="local_remove">移出音乐库</string>
+    <string name="local_remove_confirmation">将「%1$s」移出本地音乐库？原文件会保留，当前队列中的曲目仍可播放。</string>
+    <string name="local_removed">已移出音乐库，原文件仍保留</string>
+    <string name="local_remove_failed">移除未完成，请重试</string>
 </resources>

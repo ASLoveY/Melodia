@@ -3,10 +3,12 @@ package com.lin0721.linmusic.feature.library.data
 import com.lin0721.linmusic.core.model.Artist
 import com.lin0721.linmusic.core.model.EmptyBody
 import com.lin0721.linmusic.core.model.Track
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
 import retrofit2.http.Path
 import retrofit2.http.POST
+import retrofit2.http.Tag
 
 // 音乐库（收藏专辑/听歌排行/收藏数）相关的网易云 Retrofit 接口定义。
 interface LibraryApi {
@@ -31,14 +33,16 @@ interface LibraryApi {
     // 删除当前用户创建的歌单。网易云接口要求 ids 是 JSON 数组字符串，例如 "[123]"。
     @POST("/weapi/playlist/remove")
     suspend fun deletePlaylist(
-        @Body body: PlaylistDeleteRequest
+        @Body body: PlaylistDeleteRequest,
+        @Tag sessionTag: UserSessionTag
     ): PlaylistActionResponse
 
     // 取消收藏歌单，路径与 playlist 域的 PlaylistApi 保持一致。
     @POST("/eapi/playlist/{op}")
     suspend fun updatePlaylistSubscription(
         @Path("op") op: String,
-        @Body body: PlaylistSubscriptionRequest
+        @Body body: PlaylistSubscriptionRequest,
+        @Tag sessionTag: UserSessionTag
     ): PlaylistActionResponse
 }
 

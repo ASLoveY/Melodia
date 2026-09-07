@@ -1,6 +1,7 @@
 package com.lin0721.linmusic.di
 
 import com.lin0721.linmusic.feature.account.ui.AccountViewModel
+import com.lin0721.linmusic.feature.local.ui.LocalMusicViewModel
 
 import com.lin0721.linmusic.feature.settings.ui.SettingsViewModel
 import com.lin0721.linmusic.feature.create.ui.CreateViewModel
@@ -29,6 +30,7 @@ import org.koin.dsl.module
  */
 val viewModelModule = module {
     viewModelOf(::AccountViewModel)
+    viewModelOf(::LocalMusicViewModel)
 
     viewModelOf(::HomeViewModel)
     viewModelOf(::MusicViewModel)

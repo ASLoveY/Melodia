@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +48,8 @@ import coil.compose.AsyncImage
 import com.lin0721.linmusic.core.ui.components.MelodiaIconButton
 import com.lin0721.linmusic.core.ui.components.MelodiaButton
 import com.lin0721.linmusic.LocalBottomOverlayInset
+import com.lin0721.linmusic.R
+import com.lin0721.linmusic.feature.local.ui.LocalMusicContent
 import com.lin0721.linmusic.core.ui.components.LoginBottomSheet
 import com.lin0721.linmusic.core.ui.components.MelodiaDragHandle
 import com.lin0721.linmusic.core.ui.components.WebViewLoginScreen
@@ -101,6 +105,7 @@ fun LibraryScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var isSearchActive by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
+    var showLocalMusic by rememberSaveable { mutableStateOf(false) }
     var itemActions by remember { mutableStateOf<LibraryItem?>(null) }
 
     LaunchedEffect(userProfile?.uid) { itemActions = null }
@@ -220,26 +225,47 @@ fun LibraryScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        MelodiaIconButton(onClick = { isSearchActive = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "搜索", tint = MaterialTheme.colorScheme.onSurface)
-                        }
-
-                        MelodiaIconButton(onClick = {
-                            if (userProfile != null) {
-                                showCreateDialog = true
-                            } else {
-                                com.lin0721.linmusic.core.ui.components.ToastManager.showToast("请先登录以创建歌单！")
-                                showLoginSheet = true
+                        if (!showLocalMusic) {
+                            MelodiaIconButton(onClick = { isSearchActive = true }) {
+                                Icon(Icons.Default.Search, contentDescription = "搜索", tint = MaterialTheme.colorScheme.onSurface)
                             }
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = "创建歌单", tint = MaterialTheme.colorScheme.onSurface)
+
+                            MelodiaIconButton(onClick = {
+                                if (userProfile != null) {
+                                    showCreateDialog = true
+                                } else {
+                                    com.lin0721.linmusic.core.ui.components.ToastManager.showToast("请先登录以创建歌单！")
+                                    showLoginSheet = true
+                                }
+                            }) {
+                                Icon(Icons.Default.Add, contentDescription = "创建歌单", tint = MaterialTheme.colorScheme.onSurface)
+                            }
                         }
                     }
                 }
             }
 
-            // 用户登录状态条件渲染
-            if (userProfile == null) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = !showLocalMusic,
+                    onClick = { showLocalMusic = false },
+                    label = { Text(stringResource(R.string.library_online_music)) }
+                )
+                FilterChip(
+                    selected = showLocalMusic,
+                    onClick = {
+                        showLocalMusic = true
+                        isSearchActive = false
+                        viewModel.updateSearchQuery("")
+                    },
+                    label = { Text(stringResource(R.string.local_music_title)) }
+                )
+            }
+
+            // 本地音乐不依赖网易云登录态。
+            if (showLocalMusic) {
+                LocalMusicContent(Modifier.weight(1f))
+            } else if (userProfile == null) {
                 NotLoggedInView(
                     onLoginClick = { showLoginSheet = true }
                 )

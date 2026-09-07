@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.lin0721.linmusic.core.log.AppLogger
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -26,6 +27,18 @@ data class UserProfile(
     val avatarUrl: String,
     val signature: String = ""
 )
+
+data class UserSessionTag(
+    val uid: Long,
+    val revision: Long
+)
+
+data class UserSessionSnapshot(
+    val tag: UserSessionTag?,
+    val cookies: String?
+)
+
+class SessionChangedException : IOException("账号状态已变化，请刷新后重试")
 
 // 登录同步期间需要以一次原子会话写入为边界，避免失败回滚覆盖后续登录。
 data class LoginSessionAttempt(
@@ -76,6 +89,18 @@ class UserPreferences(private val context: Context) : LoginSessionStore {
     val cookies: Flow<String?> = context.userDataStore.data.map { prefs ->
         prefs[KEY_COOKIES]
     }
+
+    /** Reads profile, revision, and Cookie from one DataStore snapshot. */
+    suspend fun currentSessionSnapshot(): UserSessionSnapshot {
+        val prefs = context.userDataStore.data.first()
+        val profile = decodeProfile(prefs[KEY_USER_PROFILE])
+        val cookies = prefs[KEY_COOKIES]
+        val tag = profile?.uid?.takeIf { it > 0L }?.takeIf { cookies?.isNotBlank() == true }
+            ?.let { UserSessionTag(it, prefs[KEY_SESSION_REVISION] ?: 0L) }
+        return UserSessionSnapshot(tag = tag, cookies = cookies)
+    }
+
+    suspend fun currentSessionTag(): UserSessionTag? = currentSessionSnapshot().tag
 
     // 读取屏蔽艺人 ID 列表
     val blockedArtistIds: Flow<Set<Long>> = context.userDataStore.data.map { prefs ->

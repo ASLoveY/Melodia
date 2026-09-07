@@ -28,7 +28,8 @@ fun SongInfo(
     artist: String,
     isLiked: Boolean,
     onToggleLike: () -> Unit,
-    onArtistClick: (() -> Unit)? = null
+    onArtistClick: (() -> Unit)? = null,
+    showLike: Boolean = true
 ) {
     Row(
         modifier = Modifier
@@ -57,16 +58,18 @@ fun SongInfo(
                 modifier = if (onArtistClick != null) Modifier.clickable(onClick = onArtistClick) else Modifier
             )
         }
-        MelodiaIconButton(
-            onClick = onToggleLike,
-            modifier = Modifier.offset(x = 10.dp)
-        ) {
-            Icon(
-                if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
+        if (showLike) {
+            MelodiaIconButton(
+                onClick = onToggleLike,
+                modifier = Modifier.offset(x = 10.dp)
+            ) {
+                Icon(
+                    if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
     }
 }

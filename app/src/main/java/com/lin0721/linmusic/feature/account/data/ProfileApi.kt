@@ -1,22 +1,26 @@
 package com.lin0721.linmusic.feature.account.data
 
 import com.lin0721.linmusic.core.model.EmptyBody
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Tag
 
 interface ProfileApi {
 
     @POST("/weapi/v1/user/detail/{uid}")
     suspend fun getProfile(
         @Path("uid") uid: Long,
-        @Body body: EmptyBody = EmptyBody()
+        @Body body: EmptyBody = EmptyBody(),
+        @Tag sessionTag: UserSessionTag? = null
     ): ProfileDetailResponse
 
     @POST("/weapi/user/profile/update")
     suspend fun updateProfile(
-        @Body body: ProfileUpdateRequest
+        @Body body: ProfileUpdateRequest,
+        @Tag sessionTag: UserSessionTag
     ): ProfileUpdateResponse
 }
 

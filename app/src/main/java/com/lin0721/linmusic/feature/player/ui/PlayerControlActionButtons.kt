@@ -29,7 +29,7 @@ import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 fun ActionButtons(
     onOutputDeviceClick: () -> Unit,
     onQueueClick: () -> Unit,
-    onShareClick: () -> Unit,
+    onShareClick: (() -> Unit)?,
     connectedDevice: AudioDeviceInfo? = null
 ) {
     val outputDeviceIcon = connectedDevice?.let { deviceIcon(it.type) } ?: Icons.Rounded.SpeakerGroup
@@ -70,13 +70,15 @@ fun ActionButtons(
             }
         }
         Row {
-            MelodiaIconButton(onClick = onShareClick) {
-                Icon(
-                    imageVector = Icons.Rounded.Share,
-                    contentDescription = "分享",
-                    tint = TextGray,
-                    modifier = Modifier.size(24.dp)
-                )
+            if (onShareClick != null) {
+                MelodiaIconButton(onClick = onShareClick) {
+                    Icon(
+                        imageVector = Icons.Rounded.Share,
+                        contentDescription = "分享",
+                        tint = TextGray,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
             MelodiaIconButton(
                 onClick = onQueueClick,

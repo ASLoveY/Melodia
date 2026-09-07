@@ -66,7 +66,6 @@ class MelodiaPlaybackService : MediaSessionService() {
         // 允许跨协议重定向（如 HTTPS 到 HTTP）
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
-        val defaultDataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
 
         // 动态代理数据源，每次请求新数据源时获取最新配置并创建对应的源
         val dynamicDataSourceFactory = androidx.media3.datasource.DataSource.Factory {
@@ -81,17 +80,19 @@ class MelodiaPlaybackService : MediaSessionService() {
                 CacheReadRecoveryDataSource(
                     CacheDataSource.Factory()
                         .setCache(cache)
-                        .setUpstreamDataSourceFactory(defaultDataSourceFactory)
+                        .setUpstreamDataSourceFactory(httpDataSourceFactory)
                         .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
                         .createDataSource()
                 )
             } else {
-                defaultDataSourceFactory.createDataSource()
+                httpDataSourceFactory.createDataSource()
             }
         }
 
+        // 仅为网络上游加缓存；content/file URI 交给 DefaultDataSource 原生读取，避免重复缓存本地文件。
+        val defaultDataSourceFactory = DefaultDataSource.Factory(this, dynamicDataSourceFactory)
         val localExoPlayer = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(dynamicDataSourceFactory))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(defaultDataSourceFactory))
             .build()
         this.exoPlayer = localExoPlayer
 
@@ -154,9 +155,14 @@ class MelodiaPlaybackService : MediaSessionService() {
         localExoPlayer.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                 super.onMediaItemTransition(mediaItem, reason)
-                mediaItem?.mediaId?.toLongOrNull()?.let { songId ->
-                    checkAndFetchLikedStatus(songId)
+                if (mediaItem?.isLocalAudio != true) {
+                    mediaItem?.mediaId?.toLongOrNull()?.let { songId ->
+                        checkAndFetchLikedStatus(songId)
+                    }
                 }
+                // The local item has no like command; refresh the controller layout immediately
+                // so a layout from the previous remote song cannot remain visible.
+                updateCustomLayout()
             }
         })
 
@@ -247,7 +253,9 @@ class MelodiaPlaybackService : MediaSessionService() {
     }
 
     private fun updateCustomLayoutForController(session: MediaSession, controller: MediaSession.ControllerInfo) {
-        val songId = exoPlayer?.currentMediaItem?.mediaId?.toLongOrNull() ?: -1L
+        val currentMediaItem = exoPlayer?.currentMediaItem
+        val isLocalAudio = currentMediaItem?.isLocalAudio == true
+        val songId = currentMediaItem?.mediaId?.toLongOrNull() ?: -1L
         val isLiked = songId != -1L && songId in likedSongIdsCache
 
         val likeIconRes = if (isLiked) R.drawable.ic_favorite else R.drawable.ic_favorite_border
@@ -277,13 +285,19 @@ class MelodiaPlaybackService : MediaSessionService() {
             .setSessionCommand(SessionCommand("ACTION_TOGGLE_PLAY_MODE", Bundle()))
             .build()
 
-        val customLayout = com.google.common.collect.ImmutableList.of(likeButton, modeButton)
+        val customLayout = if (isLocalAudio) {
+            com.google.common.collect.ImmutableList.of(modeButton)
+        } else {
+            com.google.common.collect.ImmutableList.of(likeButton, modeButton)
+        }
         session.setCustomLayout(controller, customLayout)
     }
 
     private fun updateCustomLayout() {
         val session = mediaSession ?: return
-        val songId = exoPlayer?.currentMediaItem?.mediaId?.toLongOrNull() ?: -1L
+        val currentMediaItem = exoPlayer?.currentMediaItem
+        val isLocalAudio = currentMediaItem?.isLocalAudio == true
+        val songId = currentMediaItem?.mediaId?.toLongOrNull() ?: -1L
         val isLiked = songId != -1L && songId in likedSongIdsCache
 
         val likeIconRes = if (isLiked) R.drawable.ic_favorite else R.drawable.ic_favorite_border
@@ -313,7 +327,11 @@ class MelodiaPlaybackService : MediaSessionService() {
             .setSessionCommand(SessionCommand("ACTION_TOGGLE_PLAY_MODE", Bundle()))
             .build()
 
-        val customLayout = com.google.common.collect.ImmutableList.of(likeButton, modeButton)
+        val customLayout = if (isLocalAudio) {
+            com.google.common.collect.ImmutableList.of(modeButton)
+        } else {
+            com.google.common.collect.ImmutableList.of(likeButton, modeButton)
+        }
         session.setCustomLayout(customLayout)
     }
 

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lin0721.linmusic.core.auth.UserPreferences
 import com.lin0721.linmusic.core.auth.UserProfile
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import com.lin0721.linmusic.core.auth.SyncProfileAfterLoginUseCase
 import com.lin0721.linmusic.core.log.AppLogger
 import com.lin0721.linmusic.core.userartist.UserArtistRepository
@@ -99,15 +100,16 @@ class LibraryViewModel(
     val isGridView: StateFlow<Boolean> = _isGridView.asStateFlow()
 
     private var activeUserId: Long? = null
+    private var activeSessionTag: UserSessionTag? = null
     private var libraryLoadJob: Job? = null
     private var libraryLoadGeneration = 0L
     private val playlistRemoval = PlaylistRemovalCoordinator(
         scope = viewModelScope,
-        currentUserId = { activeUserId },
-        remove = { id, kind ->
+        currentSession = { activeSessionTag },
+        remove = { id, kind, sessionTag ->
             val result = when (kind) {
-                PlaylistRemovalKind.DELETE -> libraryRepository.deletePlaylist(id)
-                PlaylistRemovalKind.UNSUBSCRIBE -> libraryRepository.unsubscribePlaylist(id)
+                PlaylistRemovalKind.DELETE -> libraryRepository.deletePlaylist(id, sessionTag)
+                PlaylistRemovalKind.UNSUBSCRIBE -> libraryRepository.unsubscribePlaylist(id, sessionTag)
             }.firstOrNull() ?: Result.failure(IllegalStateException("操作未完成，请重试"))
             result.fold(
                 onSuccess = { Result.success(Unit) },
@@ -121,6 +123,7 @@ class LibraryViewModel(
     init {
         viewModelScope.launch {
             userPreferences.userProfile.collect { profile ->
+                activeSessionTag = userPreferences.currentSessionTag()?.takeIf { it.uid == profile?.uid }
                 if (activeUserId != profile?.uid) {
                     activeUserId = profile?.uid
                     libraryLoadGeneration++

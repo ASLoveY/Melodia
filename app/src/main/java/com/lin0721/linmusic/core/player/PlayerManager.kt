@@ -29,8 +29,8 @@ private val NETWORK_RETRY_DELAYS_MS = longArrayOf(2000L, 5000L, 10000L)
 // 距当前曲目结束的下一首链接预取阈值，用于消除播完到起播下一首之间的网络等待间隙
 private const val PREFETCH_URL_WINDOW_MS = 8000L
 
-// 预取到的下一首播放链接，按 songId 校验有效性
-private data class PrefetchedUrl(val songId: Long, val url: String)
+// 预取到的下一首播放链接，按队列稳定身份校验有效性
+private data class PrefetchedUrl(val stableKey: String, val url: String)
 
 // 播放门面：对外暴露播放状态与控制入口，队列、控制器、进度、持久化等职责交由协作者承担
 class PlayerManager(
@@ -63,8 +63,15 @@ class PlayerManager(
         context = context,
         scope = scope,
         settingsPreferences = settingsPreferences,
-        isPlaying = { _isPlaying.value },
-        onPauseRequested = { pause() }
+        isPlaying = {
+            shouldApplyNetworkPlaybackPolicy(
+                isPlaying = _isPlaying.value,
+                isLocalAudio = _currentTrack.value?.isLocalAudio == true
+            )
+        },
+        onPauseRequested = {
+            if (_currentTrack.value?.isLocalAudio != true) pause()
+        }
     )
 
     val currentPosition: StateFlow<Long> = progress.currentPosition
@@ -81,7 +88,12 @@ class PlayerManager(
 
     private var prefetchJob: Job? = null
     private var prefetchedNextUrl: PrefetchedUrl? = null
-    private var prefetchTriggeredForSongId: Long = -1L
+    private var prefetchTriggeredForKey: String? = null
+
+    // setMediaItem during cold restore can dispatch PLAYLIST_CHANGED before the user starts
+    // playback. Keep the saved position through that callback without preparing the URI.
+    private var pendingRestoredMediaId: String? = null
+    private var pendingRestoredPositionMs: Long? = null
 
     // 打卡上报用的挂钟计时：轮询到的播放位置在后台/锁屏场景下不可靠（真机验证过，间歇性追不上进度），改用挂钟时间差，不依赖控制器状态同步
     private var trackStartElapsedMs: Long = 0L
@@ -147,6 +159,14 @@ class PlayerManager(
                 progress.setPosition(mediaController.currentPosition)
                 progress.setDuration(mediaController.duration)
                 resetTrackTiming(startPlaying = mediaController.isPlaying)
+            } else if (lastTrack?.mediaItem?.isLocalAudio == true) {
+                // Restore metadata/URI only. Do not open the content URI during startup: it may
+                // have been revoked or deleted, and recovery should remain paused until the user
+                // explicitly starts playback.
+                pendingRestoredMediaId = lastTrack.mediaItem.mediaId
+                pendingRestoredPositionMs = lastTrack.positionMs
+                mediaController.setMediaItem(lastTrack.mediaItem)
+                progress.setPosition(lastTrack.positionMs)
             }
 
             mediaController.repeatMode = if (playbackQueue.playMode.value == PlayMode.SINGLE_LOOP)
@@ -284,36 +304,67 @@ class PlayerManager(
 
     fun togglePlayPause() {
         val item = _currentTrack.value ?: return
-        if (!_isPlaying.value && item.localConfiguration == null) {
-            // 重启后队列为空，从恢复的 track 元数据重建 1 项队列
+        if (!_isPlaying.value) {
+            // 重启后队列为空，从恢复的 track 元数据重建 1 项队列。Local MediaItem 的
+            // content URI 放在 metadata extras 中，不能用 toLongOrNull 丢掉这条曲目。
             if (playbackQueue.isEmpty) {
-                val songId = item.mediaId.toLongOrNull() ?: return
-                val qi = QueueItem(
-                    songId = songId,
-                    title = item.mediaMetadata.title?.toString() ?: "",
-                    artist = item.mediaMetadata.artist?.toString() ?: "",
-                    coverUrl = item.mediaMetadata.artworkUri?.toString() ?: ""
-                )
+                val localUri = item.localAudioUri()
+                val qi = if (item.isLocalAudio) {
+                    localUri?.let {
+                        QueueItem(
+                            songId = 0L,
+                            title = item.mediaMetadata.title?.toString() ?: "",
+                            artist = item.mediaMetadata.artist?.toString() ?: "",
+                            coverUrl = item.mediaMetadata.artworkUri?.toString() ?: "",
+                            localUri = it
+                        )
+                    }
+                } else {
+                    item.mediaId.toLongOrNull()?.let { songId ->
+                        QueueItem(
+                            songId = songId,
+                            title = item.mediaMetadata.title?.toString() ?: "",
+                            artist = item.mediaMetadata.artist?.toString() ?: "",
+                            coverUrl = item.mediaMetadata.artworkUri?.toString() ?: ""
+                        )
+                    }
+                }
+                if (qi == null) return
                 playbackQueue.replaceWithSingle(qi)
             }
-            fetchUrlAndPlay(playbackQueue.currentIndex.value, progress.currentPosition.value)
+            if (item.isLocalAudio && item.localConfiguration != null) {
+                if (controllerHolder.playbackState == Player.STATE_IDLE) {
+                    fetchUrlAndPlay(playbackQueue.currentIndex.value, progress.currentPosition.value)
+                } else {
+                    resume()
+                }
+            } else {
+                fetchUrlAndPlay(playbackQueue.currentIndex.value, progress.currentPosition.value)
+            }
             return
         }
-        if (_isPlaying.value) pause() else resume()
+        pause()
     }
 
     fun saveState() {
         val item = _currentTrack.value ?: return
-        val songId = item.mediaId.toLongOrNull() ?: -1L
-        if (songId == -1L) return
+        val localUri = item.localAudioUri()
+        val songId = item.mediaId.toLongOrNull() ?: if (localUri != null) 0L else -1L
+        if (songId == -1L && localUri == null) return
 
         stateStore.savePlaybackState {
+            val restoredPosition = pendingRestoredPositionMs
+                ?.takeIf { pendingRestoredMediaId == item.mediaId }
             PlaybackState(
                 songId = songId,
+                mediaId = item.mediaId,
+                localUri = localUri,
                 title = item.mediaMetadata.title?.toString() ?: "",
                 artist = item.mediaMetadata.artist?.toString() ?: "",
                 coverUrl = item.mediaMetadata.artworkUri?.toString() ?: "",
-                lastPositionMs = controllerHolder.currentPositionOrNull ?: progress.currentPosition.value
+                lastPositionMs = restoredPosition
+                    ?: controllerHolder.currentPositionOrNull
+                    ?: progress.currentPosition.value
             )
         }
     }
@@ -332,6 +383,8 @@ class PlayerManager(
             stateStore.savePlaybackState {
                 PlaybackState(
                     songId = currentTrackItem.songId,
+                    mediaId = currentTrackItem.stableKey,
+                    localUri = currentTrackItem.localUri,
                     title = currentTrackItem.title,
                     artist = currentTrackItem.artist,
                     coverUrl = currentTrackItem.coverUrl,
@@ -350,6 +403,8 @@ class PlayerManager(
             stateStore.savePlaybackState {
                 PlaybackState(
                     songId = -1L,
+                    mediaId = null,
+                    localUri = null,
                     title = "",
                     artist = "",
                     coverUrl = "",
@@ -366,18 +421,43 @@ class PlayerManager(
     private fun fetchUrlAndPlay(index: Int, startPosition: Long = 0, networkRetryAttempt: Int = 0, prefetchedUrl: String? = null) {
         val item = playbackQueue.itemAt(index) ?: return
 
+        if (pendingRestoredMediaId != null && pendingRestoredMediaId != item.stableKey) {
+            pendingRestoredMediaId = null
+            pendingRestoredPositionMs = null
+        }
+
         activePlayJob?.cancel()
         roaming.cancel()
         networkGuard.cancelRecoveryWait()
 
         activePlayJob = scope.launch {
-            if (networkGuard.blockPlaybackOnMobile()) return@launch
-
             playbackQueue.setCurrentIndex(index)
             saveQueueState()
 
             // 立即重置当前进度与时长，避免上一首歌曲的数据在加载新歌期间残留导致进度条闪烁
             progress.resetTo(startPosition)
+
+            if (item.isLocal) {
+                // Local content:// items must never ask the remote repository for a URL or be
+                // blocked by the Wi-Fi-only network policy.
+                prefetchJob?.cancel()
+                prefetchJob = null
+                prefetchedNextUrl = null
+                prefetchTriggeredForKey = null
+                val localUri = item.localUri ?: run {
+                    showLocalPlaybackFailure()
+                    skipToNextOnError(index, showError = false)
+                    return@launch
+                }
+                controllerHolder.playItem(
+                    item.toMediaItem(localUri, playbackQueue.playContext.value),
+                    playbackQueue.playMode.value,
+                    startPosition
+                )
+                return@launch
+            }
+
+            if (networkGuard.blockPlaybackOnMobile()) return@launch
 
             roaming.prefetchOnPlay(item.songId, index)
 
@@ -409,14 +489,15 @@ class PlayerManager(
         if (remainingMs > PREFETCH_URL_WINDOW_MS) return
         if (playbackQueue.playMode.value == PlayMode.SINGLE_LOOP) return
         val nextItem = playbackQueue.nextItemByMode() ?: return
-        if (prefetchTriggeredForSongId == nextItem.songId) return
-        prefetchTriggeredForSongId = nextItem.songId
+        if (nextItem.isLocal) return
+        if (prefetchTriggeredForKey == nextItem.stableKey) return
+        prefetchTriggeredForKey = nextItem.stableKey
 
         prefetchJob?.cancel()
         prefetchJob = scope.launch {
             repository.getSongUrl(nextItem.songId).collect { result ->
                 result.onSuccess { url ->
-                    prefetchedNextUrl = PrefetchedUrl(nextItem.songId, url)
+                    prefetchedNextUrl = PrefetchedUrl(nextItem.stableKey, url)
                 }
             }
         }
@@ -428,7 +509,7 @@ class PlayerManager(
         consecutiveErrors = 0
         val nextIndex = playbackQueue.nextIndex()
         val nextItem = playbackQueue.itemAt(nextIndex)
-        val cachedUrl = prefetchedNextUrl?.takeIf { it.songId == nextItem?.songId }?.url
+        val cachedUrl = prefetchedNextUrl?.takeIf { it.stableKey == nextItem?.stableKey }?.url
         prefetchedNextUrl = null
         fetchUrlAndPlay(nextIndex, prefetchedUrl = cachedUrl)
     }
@@ -500,12 +581,19 @@ class PlayerManager(
         trackLastPauseElapsedMs = if (startPlaying) null else trackStartElapsedMs
     }
 
-    private fun skipToNextOnError(failedIndex: Int) {
+    private fun skipToNextOnError(failedIndex: Int, showError: Boolean = true) {
         consecutiveErrors++
         if (consecutiveErrors >= 3 || playbackQueue.size <= 1) {
             AppLogger.e(TAG, "连续 $consecutiveErrors 次播放失败，放弃自动切歌 failedIndex=$failedIndex queueSize=${playbackQueue.size}")
-            scope.launch {
-                Toast.makeText(context, "无法获取该歌曲的播放链接", Toast.LENGTH_SHORT).show()
+            if (showError) {
+                val failedItem = playbackQueue.itemAt(failedIndex)
+                if (failedItem?.isLocal == true) {
+                    showLocalPlaybackFailure()
+                } else {
+                    scope.launch {
+                        Toast.makeText(context, "无法获取该歌曲的播放链接", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
             return
         }
@@ -529,6 +617,10 @@ class PlayerManager(
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         _isPlaying.value = isPlaying
         if (isPlaying) {
+            if (pendingRestoredMediaId == _currentTrack.value?.mediaId) {
+                pendingRestoredMediaId = null
+                pendingRestoredPositionMs = null
+            }
             consecutiveErrors = 0
             trackLastPauseElapsedMs?.let { trackPausedAccumMs += SystemClock.elapsedRealtime() - it }
             trackLastPauseElapsedMs = null
@@ -546,8 +638,11 @@ class PlayerManager(
         playbackQueue.setPlayContext(mediaItem?.mediaMetadata?.extras?.getString("playContext"))
         if (mediaItem != null) {
             reportStartPlay(mediaItem)
-            // 切歌过渡时，应当立即将当前进度重置，防止读取上一首残留位置或缓冲位置
-            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+            val pendingPosition = pendingRestoredPositionMs
+            if (pendingRestoredMediaId == mediaItem.mediaId && pendingPosition != null) {
+                progress.setPosition(pendingPosition)
+            } else if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+                // 切歌过渡时，应当立即将当前进度重置，防止读取上一首残留位置或缓冲位置
                 progress.setPosition(0L)
             }
             progress.updateDurationFromController()
@@ -559,7 +654,7 @@ class PlayerManager(
         AppLogger.i(TAG, "播放状态变化: ${playbackStateName(playbackState)}")
         if (playbackState == Player.STATE_READY) {
             progress.updateDurationFromController()
-            playbackQueue.nextItemByMode()?.let { coverPreloader.preload(it.coverUrl) }
+            playbackQueue.nextItemByMode()?.takeUnless { it.isLocal }?.let { coverPreloader.preload(it.coverUrl) }
         }
         // 单曲循环由 ExoPlayer REPEAT_MODE_ONE 处理，不会到达 STATE_ENDED
         if (playbackState == Player.STATE_ENDED && playbackQueue.playMode.value != PlayMode.SINGLE_LOOP) {
@@ -570,10 +665,24 @@ class PlayerManager(
     override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
         AppLogger.e(TAG, "播放器报错 errorCode=${error.errorCodeName} songId=${_currentTrack.value?.mediaId}", error)
+        val isLocalAudio = _currentTrack.value?.isLocalAudio == true
         scope.launch {
-            Toast.makeText(context, "当前歌曲无法播放，已自动跳过", Toast.LENGTH_SHORT).show()
+            if (isLocalAudio) {
+                Toast.makeText(context, "本地文件无法访问或格式不受支持，已跳过", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "当前歌曲无法播放，已自动跳过", Toast.LENGTH_SHORT).show()
+            }
         }
-        skipToNextOnError(playbackQueue.currentIndex.value)
+        skipToNextOnError(
+            playbackQueue.currentIndex.value,
+            showError = !isLocalAudio
+        )
+    }
+
+    private fun showLocalPlaybackFailure() {
+        scope.launch {
+            Toast.makeText(context, "本地文件无法访问或格式不受支持，已跳过", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun playbackStateName(state: Int) = when (state) {

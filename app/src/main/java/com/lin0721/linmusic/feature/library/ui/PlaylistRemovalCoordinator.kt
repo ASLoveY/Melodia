@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.library.ui
 
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -40,8 +41,8 @@ sealed interface PlaylistRemovalState {
  */
 class PlaylistRemovalCoordinator(
     private val scope: CoroutineScope,
-    private val currentUserId: () -> Long?,
-    private val remove: suspend (Long, PlaylistRemovalKind) -> Result<Unit>,
+    private val currentSession: () -> UserSessionTag?,
+    private val remove: suspend (Long, PlaylistRemovalKind, UserSessionTag) -> Result<Unit>,
     private val onRemoved: (Long) -> Unit
 ) {
 
@@ -52,7 +53,7 @@ class PlaylistRemovalCoordinator(
     private data class PendingRequest(
         val target: PlaylistRemovalTarget,
         val kind: PlaylistRemovalKind,
-        val accountId: Long,
+        val session: UserSessionTag,
         val generation: Long
     )
 
@@ -64,19 +65,19 @@ class PlaylistRemovalCoordinator(
     fun request(target: PlaylistRemovalTarget) {
         invalidateActiveRequest()
 
-        val accountId = currentUserId()?.takeIf { it > 0L }
-        if (accountId == null || target.id <= 0L || target.ownerId <= 0L || target.isLikedSongs) {
+        val session = currentSession()
+        if (session == null || target.id <= 0L || target.ownerId <= 0L || target.isLikedSongs) {
             _state.value = PlaylistRemovalState.Hidden
             return
         }
 
-        val kind = if (target.ownerId == accountId) {
+        val kind = if (target.ownerId == session.uid) {
             PlaylistRemovalKind.DELETE
         } else {
             PlaylistRemovalKind.UNSUBSCRIBE
         }
         val requestGeneration = generation
-        pending = PendingRequest(target, kind, accountId, requestGeneration)
+        pending = PendingRequest(target, kind, session, requestGeneration)
         _state.value = PlaylistRemovalState.Confirm(target, kind)
     }
 
@@ -97,8 +98,8 @@ class PlaylistRemovalCoordinator(
         if (visible.isSubmitting) return
 
         val request = pending
-        val accountId = currentUserId()?.takeIf { it > 0L }
-        if (request == null || accountId == null || accountId != request.accountId ||
+        val session = currentSession()
+        if (request == null || session == null || session != request.session ||
             request.target.id <= 0L || request.target.ownerId <= 0L || request.target.isLikedSongs
         ) {
             reset()
@@ -110,18 +111,18 @@ class PlaylistRemovalCoordinator(
         _state.value = visible.copy(isSubmitting = true, error = null)
         activeJob = scope.launch {
             val result = try {
-                remove(request.target.id, request.kind)
+                remove(request.target.id, request.kind, request.session)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
                 Result.failure(error)
             }
 
-            if (!isCurrent(requestGeneration, request.target.id, request.accountId)) return@launch
+            if (!isCurrent(requestGeneration, request.target.id, request.session)) return@launch
 
             // A reset() is the normal account-switch path. Recheck here as a second guard for an
             // account change that happened while the repository call was in flight.
-            if (currentUserId() != request.accountId) {
+            if (currentSession() != request.session) {
                 pending = null
                 _state.value = PlaylistRemovalState.Hidden
                 return@launch
@@ -129,7 +130,7 @@ class PlaylistRemovalCoordinator(
 
             if (result.isSuccess) {
                 onRemoved(request.target.id)
-                if (!isCurrent(requestGeneration, request.target.id, request.accountId)) return@launch
+                if (!isCurrent(requestGeneration, request.target.id, request.session)) return@launch
                 pending = null
                 _state.value = PlaylistRemovalState.Hidden
             } else {
@@ -151,12 +152,12 @@ class PlaylistRemovalCoordinator(
         pending = null
     }
 
-    private fun isCurrent(requestGeneration: Long, targetId: Long, accountId: Long): Boolean {
+    private fun isCurrent(requestGeneration: Long, targetId: Long, session: UserSessionTag): Boolean {
         val request = pending
         return generation == requestGeneration &&
             request?.generation == requestGeneration &&
             request.target.id == targetId &&
-            request.accountId == accountId
+            request.session == session
     }
 
     private fun removalErrorMessage(error: Throwable?): String =

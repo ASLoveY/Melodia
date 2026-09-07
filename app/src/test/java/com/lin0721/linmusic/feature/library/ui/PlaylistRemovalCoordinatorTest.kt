@@ -1,5 +1,6 @@
 package com.lin0721.linmusic.feature.library.ui
 
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
@@ -14,8 +15,8 @@ class PlaylistRemovalCoordinatorTest {
 
     @Test
     fun `请求按登录态和歌单归属选择删除或取消收藏`() = runTest {
-        var userId: Long? = 42L
-        val harness = Harness { userId }
+        var session: UserSessionTag? = UserSessionTag(42L, 1L)
+        val harness = Harness { session }
         val coordinator = harness.coordinator(this)
 
         coordinator.request(ownedTarget)
@@ -24,14 +25,14 @@ class PlaylistRemovalCoordinatorTest {
         coordinator.request(othersTarget)
         assertEquals(PlaylistRemovalKind.UNSUBSCRIBE, confirmState(coordinator).kind)
 
-        userId = null
+        session = null
         coordinator.request(ownedTarget)
         assertEquals(PlaylistRemovalState.Hidden, coordinator.state.value)
     }
 
     @Test
     fun `非法歌单和我喜欢的音乐不会显示确认页`() = runTest {
-        val harness = Harness { 42L }
+        val harness = Harness { UserSessionTag(42L, 1L) }
         val coordinator = harness.coordinator(this)
 
         listOf(
@@ -46,7 +47,7 @@ class PlaylistRemovalCoordinatorTest {
 
     @Test
     fun `确认成功只调用一次并在回调后隐藏`() = runTest {
-        val harness = Harness { 42L }
+        val harness = Harness { UserSessionTag(42L, 1L) }
         val coordinator = harness.coordinator(this)
 
         coordinator.request(ownedTarget)
@@ -67,7 +68,7 @@ class PlaylistRemovalCoordinatorTest {
 
     @Test
     fun `失败保留错误确认页并允许重试`() = runTest {
-        val harness = Harness { 42L }
+        val harness = Harness { UserSessionTag(42L, 1L) }
         val coordinator = harness.coordinator(this)
 
         coordinator.request(othersTarget)
@@ -93,7 +94,7 @@ class PlaylistRemovalCoordinatorTest {
 
     @Test
     fun `取消后不会自动重试或消费迟到成功`() = runTest {
-        val harness = Harness { 42L }
+        val harness = Harness { UserSessionTag(42L, 1L) }
         val coordinator = harness.coordinator(this)
 
         coordinator.request(ownedTarget)
@@ -111,7 +112,7 @@ class PlaylistRemovalCoordinatorTest {
 
     @Test
     fun `reset会使旧请求的迟到回调失效`() = runTest {
-        val harness = Harness { 42L }
+        val harness = Harness { UserSessionTag(42L, 1L) }
         val coordinator = harness.coordinator(this)
 
         coordinator.request(ownedTarget)
@@ -127,14 +128,14 @@ class PlaylistRemovalCoordinatorTest {
 
     @Test
     fun `确认和执行期间账号切换不会删除新账号的条目`() = runTest {
-        var userId = 42L
-        val harness = Harness { userId.toLong() }
+        var session = UserSessionTag(42L, 1L)
+        val harness = Harness { session }
         val coordinator = harness.coordinator(this)
 
         coordinator.request(ownedTarget)
         coordinator.confirm()
         runCurrent()
-        userId = 99L
+        session = UserSessionTag(99L, 2L)
         harness.responses.single().complete(Result.success(Unit))
         runCurrent()
 
@@ -145,7 +146,7 @@ class PlaylistRemovalCoordinatorTest {
     private fun confirmState(coordinator: PlaylistRemovalCoordinator): PlaylistRemovalState.Confirm =
         coordinator.state.value as PlaylistRemovalState.Confirm
 
-    private class Harness(private val userId: () -> Long?) {
+    private class Harness(private val session: () -> UserSessionTag?) {
         data class Call(val id: Long, val kind: PlaylistRemovalKind)
 
         val calls = mutableListOf<Call>()
@@ -154,8 +155,8 @@ class PlaylistRemovalCoordinatorTest {
 
         fun coordinator(scope: kotlinx.coroutines.CoroutineScope) = PlaylistRemovalCoordinator(
             scope = scope,
-            currentUserId = userId,
-            remove = { id, kind ->
+            currentSession = session,
+            remove = { id, kind, _ ->
                 calls += Call(id, kind)
                 CompletableDeferred<Result<Unit>>().also { responses += it }.await()
             },

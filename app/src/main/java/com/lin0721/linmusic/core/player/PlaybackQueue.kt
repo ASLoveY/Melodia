@@ -119,7 +119,7 @@ class PlaybackQueue {
         val currentItem = playItems.getOrNull(curIndex)
         val mutableOrig = originalItems.toMutableList()
         if (currentItem != null) {
-            val origIdx = mutableOrig.indexOfFirst { it.songId == currentItem.songId }
+            val origIdx = mutableOrig.indexOfFirst { it.stableKey == currentItem.stableKey }
             if (origIdx >= 0) {
                 mutableOrig.addAll(origIdx + 1, items)
             } else {
@@ -142,7 +142,7 @@ class PlaybackQueue {
         playItems = mutablePlay
 
         val mutableOrig = originalItems.toMutableList()
-        val origIdx = mutableOrig.indexOfFirst { it.songId == removedItem.songId }
+        val origIdx = mutableOrig.indexOfFirst { it.stableKey == removedItem.stableKey }
         if (origIdx >= 0) mutableOrig.removeAt(origIdx)
         originalItems = mutableOrig
 
@@ -186,13 +186,13 @@ class PlaybackQueue {
         if (currentItem == null || originalItems.isEmpty()) return
         when (newMode) {
             PlayMode.SHUFFLE -> {
-                val origIdx = originalItems.indexOfFirst { it.songId == currentItem.songId }.coerceAtLeast(0)
+                val origIdx = originalItems.indexOfFirst { it.stableKey == currentItem.stableKey }.coerceAtLeast(0)
                 playItems = shufflePreservingCurrent(originalItems, origIdx)
                 _currentIndex.value = 0
             }
             PlayMode.LIST_LOOP -> {
                 playItems = originalItems
-                _currentIndex.value = originalItems.indexOfFirst { it.songId == currentItem.songId }.coerceAtLeast(0)
+                _currentIndex.value = originalItems.indexOfFirst { it.stableKey == currentItem.stableKey }.coerceAtLeast(0)
             }
             PlayMode.SINGLE_LOOP -> return
         }
@@ -238,7 +238,7 @@ class PlaybackQueue {
         originalItems = snapshotItems
         val currentTrackItem = playItems.getOrNull(_currentIndex.value)
         val newIndex = if (currentTrackItem != null) {
-            val idx = snapshotItems.indexOfFirst { it.songId == currentTrackItem.songId }
+            val idx = snapshotItems.indexOfFirst { it.stableKey == currentTrackItem.stableKey }
             if (idx != -1) idx else snapshotIndex.coerceIn(0, snapshotItems.size - 1)
         } else {
             snapshotIndex.coerceIn(0, snapshotItems.size - 1)

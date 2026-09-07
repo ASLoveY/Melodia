@@ -15,6 +15,7 @@ import com.lin0721.linmusic.core.ui.theme.BottomSheetShape
 @Composable
 fun FullPlayerSheets(
     songState: PlayerSongDetailState,
+    isLocal: Boolean,
     showQueueSheet: Boolean,
     showMoreOptionsSheet: Boolean,
     collectSongId: Long?,
@@ -85,6 +86,7 @@ fun FullPlayerSheets(
             artist = artist,
             coverUrl = coverUrl,
             albumName = albumName,
+            isLocal = isLocal,
             isLiked = songState.isLiked,
             sleepTimerRemaining = sleepTimerRemaining,
             currentQuality = activeQuality,
@@ -120,7 +122,7 @@ fun FullPlayerSheets(
         )
     }
 
-    if (showCommentsSheet) {
+    if (showCommentsSheet && !isLocal) {
         CommentsBottomSheet(
             commentsState = commentsState,
             onLikeComment = onLikeComment,

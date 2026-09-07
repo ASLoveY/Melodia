@@ -8,6 +8,7 @@ import com.lin0721.linmusic.core.ui.theme.PlayerBackdropPalette
 // 播放器主区：封面、歌名歌手、单行歌词、进度条、播放控制、快捷操作
 fun LazyListScope.fullPlayerPlaybackSection(
     songState: PlayerSongDetailState,
+    isLocal: Boolean,
     colors: PlayerBackdropPalette,
     coverUrl: String,
     title: String,
@@ -22,7 +23,7 @@ fun LazyListScope.fullPlayerPlaybackSection(
     onPaletteExtracted: (PlayerBackdropPalette) -> Unit,
     onMoreClick: () -> Unit,
     onToggleLike: () -> Unit,
-    onArtistClick: () -> Unit,
+    onArtistClick: (() -> Unit)?,
     onSeek: (Long) -> Unit,
     onTogglePlay: () -> Unit,
     onPlayNext: () -> Unit,
@@ -52,16 +53,19 @@ fun LazyListScope.fullPlayerPlaybackSection(
             artist = artist,
             isLiked = songState.isLiked,
             onToggleLike = onToggleLike,
-            onArtistClick = onArtistClick
+            onArtistClick = onArtistClick,
+            showLike = !isLocal
         )
     }
 
-    item(key = "mini_lyric") {
-        MiniLyricLine(
-            lyrics = songState.lyrics,
-            currentLyricIndex = currentLyricIndex,
-            isPlaying = isPlaying
-        )
+    if (!isLocal) {
+        item(key = "mini_lyric") {
+            MiniLyricLine(
+                lyrics = songState.lyrics,
+                currentLyricIndex = currentLyricIndex,
+                isPlaying = isPlaying
+            )
+        }
     }
 
     item(key = "progress") {
@@ -92,7 +96,7 @@ fun LazyListScope.fullPlayerPlaybackSection(
         ActionButtons(
             onOutputDeviceClick = onOutputDeviceClick,
             onQueueClick = onQueueClick,
-            onShareClick = onShareClick,
+            onShareClick = onShareClick.takeUnless { isLocal },
             connectedDevice = connectedDevice
         )
     }

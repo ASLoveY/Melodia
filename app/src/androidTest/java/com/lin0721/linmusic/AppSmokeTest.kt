@@ -52,6 +52,16 @@ class AppSmokeTest {
     }
 
     @Test
+    fun libraryShowsLocalMusicWithoutLogin() {
+        waitForText("音乐库")
+        composeRule.onNodeWithText("音乐库").performClick()
+        waitForText("本地音乐")
+        composeRule.onNodeWithText("本地音乐").performClick()
+        waitForText("导入音乐")
+        composeRule.onNodeWithText("导入音乐").assertIsDisplayed()
+    }
+
+    @Test
     fun unauthenticatedCreateOpensLoginAndBackRestoresPage() {
         waitForText("创建")
         composeRule.onNodeWithText("创建").performClick()

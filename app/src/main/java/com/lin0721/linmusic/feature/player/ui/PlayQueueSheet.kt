@@ -167,7 +167,7 @@ fun PlayQueueSheet(
                     }
                     itemsIndexed(
                         items = queue.subList(0, currentIndex),
-                        key = { idx, item -> "played_${item.songId}_$idx" }
+                        key = { idx, item -> "played_${item.stableKey}_$idx" }
                     ) { idx, item ->
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { value ->
@@ -203,7 +203,7 @@ fun PlayQueueSheet(
                     item(key = "header_current") {
                         SectionLabel("正在播放")
                     }
-                    item(key = "current_${queue[currentIndex].songId}") {
+                    item(key = "current_${queue[currentIndex].stableKey}") {
                         if (isRoaming) {
                             // 漫游模式下禁用侧滑删除
                             DraggableSongRow(
@@ -261,7 +261,7 @@ fun PlayQueueSheet(
                         }
                         itemsIndexed(
                             items = queue.subList(upcomingStart, queue.size),
-                            key = { idx, item -> "upcoming_${item.songId}_$idx" }
+                            key = { idx, item -> "upcoming_${item.stableKey}_$idx" }
                         ) { idx, item ->
                             val actualIndex = upcomingStart + idx
                             val isDragging = draggedIndex == actualIndex

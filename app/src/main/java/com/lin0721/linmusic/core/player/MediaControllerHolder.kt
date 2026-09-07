@@ -16,6 +16,14 @@ import kotlin.coroutines.resumeWithException
 
 private const val TAG = "MediaControllerHolder"
 
+/** Production playback sequence shared with the device regression test. */
+internal fun Player.startPlayback(mediaItem: MediaItem, mode: PlayMode, startPosition: Long) {
+    repeatMode = if (mode == PlayMode.SINGLE_LOOP) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+    setMediaItem(mediaItem, startPosition.coerceAtLeast(0L))
+    prepare()
+    play()
+}
+
 // 持有与 MelodiaPlaybackService 的 MediaController 连接，收敛所有播放器指令下发
 class MediaControllerHolder(private val context: Context) {
 
@@ -70,16 +78,9 @@ class MediaControllerHolder(private val context: Context) {
             Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
 
-    // 装载并起播单个曲目，起播位置大于 0 时先定位再播放
+    // 在 prepare 前一次性写入起播位置，避免未准备的 MediaController 忽略独立 seekTo。
     fun playItem(mediaItem: MediaItem, mode: PlayMode, startPosition: Long) {
-        controller?.apply {
-            repeatMode = if (mode == PlayMode.SINGLE_LOOP)
-                Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-            setMediaItem(mediaItem)
-            prepare()
-            if (startPosition > 0) seekTo(startPosition)
-            play()
-        }
+        controller?.startPlayback(mediaItem, mode, startPosition)
     }
 
     fun play() {

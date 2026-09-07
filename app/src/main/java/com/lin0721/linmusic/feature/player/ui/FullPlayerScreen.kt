@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
+import com.lin0721.linmusic.core.player.isLocalAudio
 import com.lin0721.linmusic.core.ui.components.ToastManager
 import com.lin0721.linmusic.core.ui.theme.FallbackBackdropPalette
 import com.lin0721.linmusic.core.ui.theme.PaletteMemoryCache
@@ -54,6 +55,7 @@ fun FullPlayerScreen(
     val context = LocalContext.current
     val viewModel: PlayerViewModel = koinViewModel()
     val songDetailState by viewModel.songDetailState.collectAsStateWithLifecycle()
+    val isLocalTrack = currentTrack.isLocalAudio
     val songDetail = songDetailState.songDetail
     val currentLyricIndex by viewModel.currentLyricIndex.collectAsStateWithLifecycle()
     val playContext by viewModel.playerManager.playContext.collectAsStateWithLifecycle()
@@ -128,6 +130,7 @@ fun FullPlayerScreen(
         ?.replace("?param=300y300", "") ?: ""
 
     fun shareCurrentSong() {
+        if (isLocalTrack) return
         val shareText = "《$title》- $artist https://music.163.com/song?id=${currentTrack.mediaId}"
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -154,6 +157,14 @@ fun FullPlayerScreen(
             isScrollGestureActive = false
             isGestureStartedAtTop = true
             isLyricsFullScreen = false
+        }
+    }
+
+    LaunchedEffect(currentTrack.mediaId) {
+        if (isLocalTrack) {
+            isLyricsFullScreen = false
+            showCommentsSheet = false
+            collectSongId = null
         }
     }
 
@@ -231,6 +242,7 @@ fun FullPlayerScreen(
         ) {
             fullPlayerPlaybackSection(
                 songState = songDetailState,
+                isLocal = isLocalTrack,
                 colors = colors,
                 coverUrl = coverUrl,
                 title = title,
@@ -248,12 +260,12 @@ fun FullPlayerScreen(
                 },
                 onMoreClick = { showMoreOptionsSheet = true },
                 onToggleLike = viewModel::toggleLike,
-                onArtistClick = {
+                onArtistClick = if (isLocalTrack) null else ({
                     songDetail?.ar?.firstOrNull()?.id?.let { id ->
                         onClose()
                         onArtistClick(id)
                     }
-                },
+                }),
                 onSeek = onSeek,
                 onTogglePlay = onTogglePlay,
                 onPlayNext = viewModel.playerManager::playNext,
@@ -269,6 +281,7 @@ fun FullPlayerScreen(
 
             fullPlayerInfoSection(
                 songState = songDetailState,
+                isLocal = isLocalTrack,
                 colors = colors,
                 commentsState = commentsState,
                 currentLyricIndex = currentLyricIndex,
@@ -289,13 +302,14 @@ fun FullPlayerScreen(
             onTogglePlay = onTogglePlay,
             isLiked = songDetailState.isLiked,
             onToggleLike = viewModel::toggleLike,
+            showLike = !isLocalTrack,
             backgroundColor = colors.base,
-            onArtistClick = {
+            onArtistClick = if (isLocalTrack) null else ({
                 songDetail?.ar?.firstOrNull()?.id?.let { id ->
                     onClose()
                     onArtistClick(id)
                 }
-            },
+            }),
             modifier = Modifier.draggable(
                 orientation = Orientation.Vertical,
                 state = rememberDraggableState { delta ->
@@ -311,7 +325,7 @@ fun FullPlayerScreen(
         )
 
         FullPlayerLyricsOverlay(
-            visible = isLyricsFullScreen,
+            visible = isLyricsFullScreen && !isLocalTrack,
             songState = songDetailState,
             colors = colors,
             currentLyricIndex = currentLyricIndex,
@@ -336,6 +350,7 @@ fun FullPlayerScreen(
 
         FullPlayerSheets(
             songState = songDetailState,
+            isLocal = isLocalTrack,
             showQueueSheet = showQueueSheet,
             showMoreOptionsSheet = showMoreOptionsSheet,
             collectSongId = collectSongId,

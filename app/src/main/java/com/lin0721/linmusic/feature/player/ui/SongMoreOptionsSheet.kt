@@ -50,6 +50,7 @@ fun SongMoreOptionsSheet(
     artist: String,
     coverUrl: String,
     albumName: String,
+    isLocal: Boolean = false,
     isLiked: Boolean,
     sleepTimerRemaining: Long,
     currentQuality: String,
@@ -141,92 +142,92 @@ fun SongMoreOptionsSheet(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
             ) {
-                // 1. 专辑信息项
-                OptionRow(
-                    icon = Icons.Rounded.Album,
-                    text = "专辑: $albumName",
-                    onClick = {
-                        scope.launch {
-                            sheetState.hide()
-                            onDismiss()
-                            onAlbumClick()
+                if (!isLocal) {
+                    // 1. 专辑信息项
+                    OptionRow(
+                        icon = Icons.Rounded.Album,
+                        text = "专辑: $albumName",
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                                onDismiss()
+                                onAlbumClick()
+                            }
                         }
-                    }
-                )
+                    )
 
-                // 2. 歌手信息项
-                OptionRow(
-                    icon = Icons.Rounded.Person,
-                    text = "歌手: $artist",
-                    onClick = {
-                        scope.launch {
-                            sheetState.hide()
-                            onDismiss()
-                            onArtistClick()
+                    // 2. 歌手信息项
+                    OptionRow(
+                        icon = Icons.Rounded.Person,
+                        text = "歌手: $artist",
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                                onDismiss()
+                                onArtistClick()
+                            }
                         }
-                    }
-                )
+                    )
 
-
-                // 3. 收藏到歌单
-                OptionRow(
-                    icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                    text = "收藏到歌单",
-                    onClick = {
-                        scope.launch {
-                            sheetState.hide()
-                            onDismiss()
-                            onCollectClick()
+                    // 3. 收藏到歌单
+                    OptionRow(
+                        icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                        text = "收藏到歌单",
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                                onDismiss()
+                                onCollectClick()
+                            }
                         }
-                    }
-                )
+                    )
 
-                // 4. 开始相似歌曲漫游
-                OptionRow(
-                    icon = Icons.Rounded.Explore,
-                    text = "开始相似歌曲漫游",
-                    onClick = {
-                        scope.launch {
-                            sheetState.hide()
-                            onDismiss()
-                            onStartSimilarRoaming()
+                    // 4. 开始相似歌曲漫游
+                    OptionRow(
+                        icon = Icons.Rounded.Explore,
+                        text = "开始相似歌曲漫游",
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                                onDismiss()
+                                onStartSimilarRoaming()
+                            }
                         }
-                    }
-                )
+                    )
 
-                // 5. 插播相似歌曲
-                OptionRow(
-                    icon = Icons.Rounded.QueueMusic,
-                    text = "插播相似歌曲",
-                    onClick = {
-                        scope.launch {
-                            sheetState.hide()
-                            onDismiss()
-                            onInsertSimilarSongs()
+                    // 5. 插播相似歌曲
+                    OptionRow(
+                        icon = Icons.Rounded.QueueMusic,
+                        text = "插播相似歌曲",
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                                onDismiss()
+                                onInsertSimilarSongs()
+                            }
                         }
-                    }
-                )
+                    )
 
-
-                // 6. 分享
-                OptionRow(
-                    icon = Icons.Rounded.Share,
-                    text = "分享",
-                    onClick = {
-                        scope.launch {
-                            sheetState.hide()
-                            onDismiss()
-                            onShareClick()
+                    // 6. 分享
+                    OptionRow(
+                        icon = Icons.Rounded.Share,
+                        text = "分享",
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                                onDismiss()
+                                onShareClick()
+                            }
                         }
-                    }
-                )
+                    )
+                }
 
                 // 7. 音质（带有 VIP Tag）
-                var showQualityDialog by remember { mutableStateOf(false) }
+                var showQualityDialog by remember(isLocal) { mutableStateOf(false) }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
+                        .clickable(enabled = !isLocal) {
                             showQualityDialog = true
                         }
                         .padding(horizontal = 20.dp, vertical = 12.dp),
@@ -240,13 +241,13 @@ fun SongMoreOptionsSheet(
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "音质: ${getQualityDisplayName(currentQuality)}",
+                        text = if (isLocal) "本地文件" else "音质: ${getQualityDisplayName(currentQuality)}",
                         color = Color.White,
                         fontSize = 15.sp,
                         modifier = Modifier.weight(1f)
                     )
                     // VIP Tag
-                    if (currentQuality == "lossless" || currentQuality == "hires" || currentQuality == "jymaster") {
+                    if (!isLocal && (currentQuality == "lossless" || currentQuality == "hires" || currentQuality == "jymaster")) {
                         Box(
                             modifier = Modifier
                                 .border(1.dp, NeteaseRed, RoundedCornerShape(4.dp))

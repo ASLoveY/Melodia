@@ -1,3 +1,37 @@
+# v1.2.0 模拟器验收
+
+日期：2026-09-07。环境为已安装的 Android Studio 2026.1.4、Android 16 / API 36 的 Pixel 7 AVD。
+
+| 检查 | 结果 |
+| --- | --- |
+| JVM 单元测试 | 213 项通过，0 失败、0 错误 |
+| 模拟器 instrumentation | 21 项通过，0 失败、0 跳过 |
+| Android Lint | 0 错误，77 条警告、18 条提示 |
+| 正式签名混淆包 | versionName `1.2.0`，versionCode `1020099`，沿用 v1.1.1 的发布证书 |
+| 安装升级 | v1.1.1 正式包覆盖升级到 v1.2.0 成功，冷启动成功 |
+| 本地文件导入 | 系统文件选择器选择两个真实 WAV，导入 2 首、失败 0 首，时长均为 2 分钟 |
+| 重复导入 | 再次选择同一文件，新增 0 首、重复 1 首，曲库数量保持不变 |
+| 离线播放 | 未登录、飞行模式开启且 Wi-Fi 关闭时，MediaSession 为 PLAYING，位置持续前进 |
+| 重启续播 | 暂停在 45,730 ms，强制退出并重新打开后保持暂停；点击播放从 45,730 ms 继续，并前进到 64,240 ms |
+| 曲库管理 | 标题搜索、名称排序、下一首均正常；移出后源文件仍为 3,840,044 字节，原队列仍可播放 |
+| 崩溃检查 | 本次正式包检查的 crash 日志为空 |
+
+新增设备测试覆盖歌单操作入口、资料编辑及会话持久化、本地音乐入口与列表交互、跨进程媒体元数据 URI 恢复，以及真实 MediaSession/MediaController 从 30 秒位置起播。后者使用生成的 WAV 和生产播放调用顺序，确认播放器实际进入播放状态。
+
+歌单删除、取消收藏及个人资料保存通过可控接口和状态测试；请求通过 Retrofit Tag 绑定账号及会话版本，并从同一份 DataStore 快照取得 Cookie。未对真实账号执行云端删除或资料修改；实体手机蓝牙、来电和厂商后台策略仍不属于本次模拟器验收范围。
+
+本机最终模拟器使用 WHPX 和 host GPU。旧版 ADB 与新 SDK 存在冲突，因此验证使用新 SDK 的独立 ADB 服务端口 `15038`；没有替换系统中的旧 SDK。日志及测试音频保存在被忽略的 `build/feature3-validation/`，报告位于 `build/phase1-verified/app/reports/`。
+
+复现项目检查：
+
+```powershell
+.\gradlew.bat testDebugUnitTest connectedDebugAndroidTest lintDebug assembleRelease
+```
+
+正式包需配置 `RELEASE_*` 签名环境变量，并传入 `-PreleaseVersionName=1.2.0 -PreleaseVersionCode=1020099`。本机使用的临时隔离输出参数见下文。
+
+---
+
 # v1.1.1 模拟器验收
 
 日期：2026-09-07。

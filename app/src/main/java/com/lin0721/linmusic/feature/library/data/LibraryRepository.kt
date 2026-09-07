@@ -1,6 +1,7 @@
 package com.lin0721.linmusic.feature.library.data
 
 import com.lin0721.linmusic.core.model.Track
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import kotlinx.coroutines.flow.Flow
 
 // 音乐库数据仓储（library 业务域）
@@ -16,8 +17,8 @@ interface LibraryRepository {
     fun getUserSubcount(): Flow<Result<UserSubcountResponse>>
 
     // 删除当前用户创建的歌单
-    fun deletePlaylist(id: Long): Flow<Result<Unit>>
+    fun deletePlaylist(id: Long, sessionTag: UserSessionTag): Flow<Result<Unit>>
 
     // 取消收藏歌单
-    fun unsubscribePlaylist(id: Long): Flow<Result<Unit>>
+    fun unsubscribePlaylist(id: Long, sessionTag: UserSessionTag): Flow<Result<Unit>>
 }

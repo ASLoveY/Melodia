@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lin0721.linmusic.core.auth.UserPreferences
 import com.lin0721.linmusic.core.auth.UserProfile
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import com.lin0721.linmusic.core.network.AppError
 import com.lin0721.linmusic.core.network.ResourceProvider
 import com.lin0721.linmusic.core.network.toUserMessage
@@ -51,7 +52,7 @@ class AccountViewModel(
 
     private suspend fun loadProfile(uid: Long): Result<UserProfileDetails> {
         val revision = preferences.sessionRevisionForUser(uid) ?: return sessionChanged()
-        val result = repository.getProfile(uid).firstOrNull()
+        val result = repository.getProfile(uid, UserSessionTag(uid, revision)).firstOrNull()
             ?: Result.failure(IllegalStateException("未能读取资料，请重试"))
         if (preferences.sessionRevisionForUser(uid) != revision) return sessionChanged()
         loadedSession = uid to revision
@@ -63,7 +64,12 @@ class AccountViewModel(
         if (session.first != profile.userId || preferences.sessionRevisionForUser(session.first) != session.second) {
             return sessionChanged()
         }
-        return (repository.updateProfile(profile, nickname, signature).firstOrNull()
+        return (repository.updateProfile(
+            profile = profile,
+            nickname = nickname,
+            signature = signature,
+            sessionTag = UserSessionTag(session.first, session.second)
+        ).firstOrNull()
             ?: Result.failure(IllegalStateException("保存未完成，请重试"))).userFacing()
     }
 

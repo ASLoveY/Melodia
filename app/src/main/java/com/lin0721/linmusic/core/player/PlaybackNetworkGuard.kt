@@ -15,6 +15,10 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "PlaybackNetworkGuard"
 
+/** Network playback policy applies only to actively playing remote media. */
+internal fun shouldApplyNetworkPlaybackPolicy(isPlaying: Boolean, isLocalAudio: Boolean): Boolean =
+    isPlaying && !isLocalAudio
+
 // 网络策略守卫：监听 Wi-Fi 切换到移动网络，并按“仅 Wi-Fi 播放”设置拦截联网起播
 class PlaybackNetworkGuard(
     private val context: Context,
@@ -40,7 +44,7 @@ class PlaybackNetworkGuard(
                     val alertEnabled = settingsPreferences.mobileAlert.first()
                     val wifiOnly = settingsPreferences.wifiOnlyPlay.first()
 
-                    if (wifiOnly) {
+                    if (wifiOnly && isPlaying()) {
                         onPauseRequested()
                         Toast.makeText(context, "已为暂停播放（开启了“仅Wi-Fi联网播放”）", Toast.LENGTH_LONG).show()
                     } else if (alertEnabled && isPlaying()) {

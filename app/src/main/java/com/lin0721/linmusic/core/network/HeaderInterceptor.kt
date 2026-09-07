@@ -1,6 +1,9 @@
 package com.lin0721.linmusic.core.network
 
+import com.lin0721.linmusic.core.auth.SessionChangedException
 import com.lin0721.linmusic.core.auth.UserPreferences
+import com.lin0721.linmusic.core.auth.UserSessionSnapshot
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import com.lin0721.linmusic.core.log.AppLogger
 import com.lin0721.linmusic.core.preferences.SettingsPreferences
 import kotlinx.coroutines.flow.first
@@ -41,10 +44,21 @@ class HeaderInterceptor(
         val urlString = url.toString()
         val newRequestBuilder = originalRequest.newBuilder()
 
-        // DataStore 读取异常时降级为安全默认值，避免单次读取失败拖垮所有网络请求
+        val sessionTag = originalRequest.tag(UserSessionTag::class.java)
+
+        // Tagged requests use one atomic DataStore snapshot. If the account/revision changed,
+        // fail before dispatching instead of rebuilding the request with a newer account Cookie.
         val storedCookies = try {
-            runBlocking { userPreferences.cookies.first() }
+            if (sessionTag == null) {
+                runBlocking { userPreferences.cookies.first() }
+            } else {
+                val snapshot = runBlocking { userPreferences.currentSessionSnapshot() }
+                resolveTaggedSessionCookie(sessionTag, snapshot)
+            }
+        } catch (changed: SessionChangedException) {
+            throw changed
         } catch (e: Exception) {
+            if (sessionTag != null) throw SessionChangedException()
             AppLogger.e(TAG, "读取存储的 Cookie 失败，本次请求按未登录处理", e)
             null
         }
@@ -112,4 +126,15 @@ class HeaderInterceptor(
         
         return chain.proceed(newRequestBuilder.build())
     }
+}
+
+/** Pure guard kept separate so the session TOCTOU rule can be tested without Android networking. */
+internal fun resolveTaggedSessionCookie(
+    expected: UserSessionTag,
+    snapshot: UserSessionSnapshot
+): String {
+    if (snapshot.tag != expected || snapshot.cookies.isNullOrBlank()) {
+        throw SessionChangedException()
+    }
+    return checkNotNull(snapshot.cookies)
 }

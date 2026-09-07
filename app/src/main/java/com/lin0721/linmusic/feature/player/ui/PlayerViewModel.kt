@@ -22,6 +22,7 @@ import com.lin0721.linmusic.core.player.data.PlaybackRepository
 import com.lin0721.linmusic.feature.player.data.PlayerRepository
 import com.lin0721.linmusic.core.player.PlayerManager
 import com.lin0721.linmusic.core.player.QueueItem
+import com.lin0721.linmusic.core.player.isLocalAudio
 import com.lin0721.linmusic.feature.player.domain.SongWikiData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -111,6 +112,7 @@ class PlayerViewModel(
 
     // 更新当前环境的音质设置并重新加载当前歌曲播放
     fun updateQuality(quality: String) {
+        if (currentMediaId?.startsWith("local:") == true) return
         viewModelScope.launch {
             if (isWifiConnected()) {
                 settingsPreferences.saveWifiQuality(quality)
@@ -139,9 +141,11 @@ class PlayerViewModel(
     val collectState: StateFlow<PlaylistCollectState> = songCollectDelegate.state
 
     private var currentSongId: Long = -1L
+    // mediaId is the request identity. Local media ids are not numeric, so using only songId
+    // would leave the previous remote request looking current while a local track is playing.
+    private var currentMediaId: String? = null
 
     init {
-        loadLikedSongIds()
         observeTrackChanges()
         observePosition()
     }
@@ -160,7 +164,8 @@ class PlayerViewModel(
 
     fun toggleLike() {
         val songId = currentSongId
-        if (songId == -1L) return
+        if (!isRemoteSong(songId)) return
+        val requestMediaId = currentMediaId ?: return
 
         val newLiked = !_songDetailState.value.isLiked
         _songDetailState.update { it.copy(isLiked = newLiked) }
@@ -171,8 +176,10 @@ class PlayerViewModel(
                     if (newLiked) likedSongIds.add(songId) else likedSongIds.remove(songId)
                 }.onFailure {
                     // 回滚
-                    _songDetailState.update { it.copy(isLiked = !newLiked) }
-                    _toastEvent.emit(it.toUserMessage(resourceProvider))
+                    if (isCurrentMedia(requestMediaId)) {
+                        _songDetailState.update { it.copy(isLiked = !newLiked) }
+                        _toastEvent.emit(it.toUserMessage(resourceProvider))
+                    }
                 }
             }
         }
@@ -180,12 +187,15 @@ class PlayerViewModel(
 
     // 打开"收藏到歌单"面板前先拉取歌单勾选状态
     fun prepareCollectDialog(songId: Long) {
+        if (!isCurrentRemoteSong(songId)) return
         viewModelScope.launch {
             songCollectDelegate.prepare(songId, likedSongIds) { _toastEvent.emit(it) }
         }
     }
 
     fun savePlaylistCollection(songId: Long, items: List<PlaylistCollectItem>) {
+        if (!isCurrentRemoteSong(songId)) return
+        val requestMediaId = currentMediaId ?: return
         viewModelScope.launch {
             songCollectDelegate.save(
                 songId = songId,
@@ -195,13 +205,16 @@ class PlayerViewModel(
                 onLikedChanged = { newLiked ->
                     likedSongIds.clear()
                     likedSongIds.addAll(newLiked)
-                    _songDetailState.update { it.copy(isLiked = currentSongId in likedSongIds) }
+                    if (isCurrentMedia(requestMediaId)) {
+                        _songDetailState.update { it.copy(isLiked = currentSongId in likedSongIds) }
+                    }
                 }
             )
         }
     }
 
     fun createPlaylistAndAddSong(name: String, songId: Long) {
+        if (!isCurrentRemoteSong(songId)) return
         viewModelScope.launch {
             songCollectDelegate.createAndAdd(name, songId, likedSongIds) { _toastEvent.emit(it) }
         }
@@ -210,18 +223,31 @@ class PlayerViewModel(
     private fun observeTrackChanges() {
         viewModelScope.launch {
             playerManager.currentTrack
-                .map { it?.mediaId?.toLongOrNull() ?: -1L }
+                .map { item -> item?.takeIf { it.mediaId.isNotBlank() } }
                 .distinctUntilChanged()
-                .collectLatest { songId ->
-                    if (songId != -1L && songId != currentSongId) {
-                        currentSongId = songId
-                        clearState()
-                        _songDetailState.update { it.copy(isLiked = songId in likedSongIds) }
-                        loadLyrics(songId)
-                        loadSongDetail(songId)
-                        loadSongWiki(songId)
-                        loadComments(songId)
+                .collectLatest { item ->
+                    val mediaId = item?.mediaId
+                    if (mediaId == currentMediaId) return@collectLatest
+
+                    currentMediaId = mediaId
+                    currentSongId = if (item != null && !item.isLocalAudio) {
+                        mediaId?.toLongOrNull() ?: -1L
+                    } else {
+                        -1L
                     }
+                    clearState()
+
+                    if (item == null || item.isLocalAudio) return@collectLatest
+
+                    val songId = currentSongId
+                    if (songId <= 0L) return@collectLatest
+                    val requestMediaId = mediaId ?: return@collectLatest
+                    if (!likedListLoaded) loadLikedSongIds()
+                    _songDetailState.update { it.copy(isLiked = songId in likedSongIds) }
+                    loadLyrics(songId, requestMediaId)
+                    loadSongDetail(songId, requestMediaId)
+                    loadSongWiki(songId, requestMediaId)
+                    loadComments(songId, requestMediaId)
                 }
         }
     }
@@ -231,6 +257,14 @@ class PlayerViewModel(
         _currentLyricIndex.value = -1
         _commentsState.value = CommentsState.Loading
     }
+
+    private fun isRemoteSong(songId: Long): Boolean =
+        songId > 0L && currentMediaId?.startsWith("local:") != true
+
+    private fun isCurrentRemoteSong(songId: Long): Boolean =
+        isRemoteSong(songId) && currentSongId == songId
+
+    private fun isCurrentMedia(requestMediaId: String): Boolean = currentMediaId == requestMediaId
 
     private fun observePosition() {
         viewModelScope.launch {
@@ -242,31 +276,34 @@ class PlayerViewModel(
         }
     }
 
-    private fun loadLyrics(songId: Long) {
+    private fun loadLyrics(songId: Long, requestMediaId: String) {
         viewModelScope.launch {
+            if (!isCurrentMedia(requestMediaId)) return@launch
             _songDetailState.update { it.copy(isLyricsLoading = true) }
             playbackRepository.getLyrics(songId).collect { result ->
                 result.onSuccess { lines ->
-                    if (currentSongId == songId) _songDetailState.update { it.copy(lyrics = lines) }
+                    if (isCurrentMedia(requestMediaId)) _songDetailState.update { it.copy(lyrics = lines) }
                 }.onFailure {
-                    if (currentSongId == songId) _songDetailState.update { it.copy(lyrics = emptyList()) }
+                    if (isCurrentMedia(requestMediaId)) _songDetailState.update { it.copy(lyrics = emptyList()) }
                 }
             }
-            _songDetailState.update { it.copy(isLyricsLoading = false) }
+            if (isCurrentMedia(requestMediaId)) {
+                _songDetailState.update { it.copy(isLyricsLoading = false) }
+            }
         }
     }
 
-    private fun loadSongDetail(songId: Long) {
+    private fun loadSongDetail(songId: Long, requestMediaId: String) {
         viewModelScope.launch {
             playerRepository.getSongDetail(songId).collect { result ->
                 result.onSuccess { track ->
-                    if (currentSongId != songId) return@onSuccess
+                    if (!isCurrentMedia(requestMediaId)) return@onSuccess
                     _songDetailState.update { it.copy(songDetail = track) }
                     val primaryArtistId = track.ar.firstOrNull()?.id
                     if (primaryArtistId != null && primaryArtistId > 0) {
-                        loadSimilarArtists(primaryArtistId, songId)
-                        loadArtistDetail(primaryArtistId, songId)
-                        loadArtistAlbums(primaryArtistId, songId)
+                        loadSimilarArtists(primaryArtistId, requestMediaId)
+                        loadArtistDetail(primaryArtistId, requestMediaId)
+                        loadArtistAlbums(primaryArtistId, requestMediaId)
                     }
                 }
             }
@@ -274,39 +311,42 @@ class PlayerViewModel(
     }
 
     // 异步加载歌曲详情与音乐百科信息
-    private fun loadSongWiki(songId: Long) {
+    private fun loadSongWiki(songId: Long, requestMediaId: String) {
         viewModelScope.launch {
             playerRepository.getSongWiki(songId).collect { result ->
-                if (currentSongId == songId) {
+                if (isCurrentMedia(requestMediaId)) {
                     _songDetailState.update { it.copy(songWiki = result.getOrNull()) }
                 }
             }
         }
     }
 
-    private fun loadSimilarArtists(artistId: Long, forSongId: Long) {
+    private fun loadSimilarArtists(artistId: Long, requestMediaId: String) {
         viewModelScope.launch {
+            if (!isCurrentMedia(requestMediaId)) return@launch
             _songDetailState.update { it.copy(isSimilarArtistsLoading = true) }
             artistRepository.getSimilarArtists(artistId).collect { result ->
-                if (currentSongId != forSongId) return@collect
+                if (!isCurrentMedia(requestMediaId)) return@collect
                 result.onSuccess { artists ->
                     _songDetailState.update { it.copy(similarArtists = artists) }
                 }.onFailure {
                     _songDetailState.update { it.copy(similarArtists = emptyList()) }
                 }
             }
-            _songDetailState.update { it.copy(isSimilarArtistsLoading = false) }
+            if (isCurrentMedia(requestMediaId)) {
+                _songDetailState.update { it.copy(isSimilarArtistsLoading = false) }
+            }
         }
     }
 
-    private fun loadArtistDetail(artistId: Long, forSongId: Long) {
+    private fun loadArtistDetail(artistId: Long, requestMediaId: String) {
         viewModelScope.launch {
             // 异步加载歌手粉丝数量作为每月听众数
-            loadArtistFansCount(artistId, forSongId)
+            loadArtistFansCount(artistId, requestMediaId)
             // 异步加载当前用户是否关注了该歌手
-            loadArtistFollowState(artistId, forSongId)
+            loadArtistFollowState(artistId, requestMediaId)
             artistRepository.getArtistDetail(artistId).collect { result ->
-                if (currentSongId != forSongId) return@collect
+                if (!isCurrentMedia(requestMediaId)) return@collect
                 result.onSuccess { detail ->
                     _songDetailState.update { it.copy(artistDetail = detail) }
                 }.onFailure {
@@ -317,10 +357,10 @@ class PlayerViewModel(
     }
 
     // 异步加载歌手关注状态
-    private fun loadArtistFollowState(artistId: Long, forSongId: Long) {
+    private fun loadArtistFollowState(artistId: Long, requestMediaId: String) {
         viewModelScope.launch {
             artistRepository.checkArtistFollowed(artistId).collect { result ->
-                if (currentSongId != forSongId) return@collect
+                if (!isCurrentMedia(requestMediaId)) return@collect
                 result.onSuccess { followed ->
                     _songDetailState.update { it.copy(isArtistFollowed = followed) }
                 }.onFailure {
@@ -331,10 +371,10 @@ class PlayerViewModel(
     }
 
     // 异步获取歌手粉丝数
-    private fun loadArtistFansCount(artistId: Long, forSongId: Long) {
+    private fun loadArtistFansCount(artistId: Long, requestMediaId: String) {
         viewModelScope.launch {
             artistRepository.getArtistFansCount(artistId).collect { result ->
-                if (currentSongId != forSongId) return@collect
+                if (!isCurrentMedia(requestMediaId)) return@collect
                 result.onSuccess { count ->
                     _songDetailState.update { it.copy(artistFansCount = count) }
                 }.onFailure {
@@ -344,10 +384,10 @@ class PlayerViewModel(
         }
     }
 
-    private fun loadArtistAlbums(artistId: Long, forSongId: Long) {
+    private fun loadArtistAlbums(artistId: Long, requestMediaId: String) {
         viewModelScope.launch {
             artistRepository.getArtistAlbums(artistId).collect { result ->
-                if (currentSongId != forSongId) return@collect
+                if (!isCurrentMedia(requestMediaId)) return@collect
                 result.onSuccess { page ->
                     _songDetailState.update { it.copy(artistAlbums = page.albums) }
                 }.onFailure {
@@ -373,11 +413,12 @@ class PlayerViewModel(
         return result
     }
 
-    private fun loadComments(songId: Long) {
+    private fun loadComments(songId: Long, requestMediaId: String) {
         viewModelScope.launch {
+            if (!isCurrentMedia(requestMediaId)) return@launch
             _commentsState.value = CommentsState.Loading
             commentRepository.getComments(songId, limit = 20).collect { result ->
-                if (currentSongId != songId) return@collect
+                if (!isCurrentMedia(requestMediaId)) return@collect
                 result.onSuccess { response ->
                     _commentsState.value = CommentsState.Success(
                         hotComments = response.hotComments,
@@ -393,13 +434,16 @@ class PlayerViewModel(
 
     fun retryComments() {
         val songId = currentSongId
-        if (songId != -1L) {
-            loadComments(songId)
+        val requestMediaId = currentMediaId
+        if (isRemoteSong(songId) && requestMediaId != null) {
+            loadComments(songId, requestMediaId)
         }
     }
 
     fun likeComment(comment: CommentItem) {
         viewModelScope.launch {
+            if (!isRemoteSong(currentSongId)) return@launch
+            val requestMediaId = currentMediaId ?: return@launch
             val profile = userPreferences.userProfile.first()
             if (profile == null) {
                 _toastEvent.emit("请先登录账号")
@@ -429,6 +473,7 @@ class PlayerViewModel(
                     )
                 } else it
             }
+            if (!isCurrentMedia(requestMediaId)) return@launch
             _commentsState.value = CommentsState.Success(
                 hotComments = updatedHotComments,
                 comments = updatedComments,
@@ -437,8 +482,10 @@ class PlayerViewModel(
 
             commentRepository.likeComment(threadId, comment.commentId, targetLike).collect { result ->
                 result.onFailure { e ->
-                    _commentsState.value = currentState
-                    _toastEvent.emit(e.toUserMessage(resourceProvider))
+                    if (isCurrentMedia(requestMediaId)) {
+                        _commentsState.value = currentState
+                        _toastEvent.emit(e.toUserMessage(resourceProvider))
+                    }
                 }
             }
         }
@@ -446,6 +493,8 @@ class PlayerViewModel(
 
     // 切换歌手的关注状态
     fun toggleArtistFollow() {
+        if (!isRemoteSong(currentSongId)) return
+        val requestMediaId = currentMediaId ?: return
         val songDetail = _songDetailState.value.songDetail ?: return
         val artistId = songDetail.ar.firstOrNull()?.id ?: return
         if (artistId <= 0) return
@@ -454,7 +503,9 @@ class PlayerViewModel(
         viewModelScope.launch {
             artistRepository.subscribeArtist(artistId, targetFollow).collect { result ->
                 result.onSuccess {
-                    _songDetailState.update { it.copy(isArtistFollowed = targetFollow) }
+                    if (isCurrentMedia(requestMediaId)) {
+                        _songDetailState.update { it.copy(isArtistFollowed = targetFollow) }
+                    }
                 }
             }
         }
@@ -472,8 +523,11 @@ class PlayerViewModel(
 
     // 开启相似歌曲漫游逻辑
     fun startSimilarSongsRoaming(songId: Long, currentTitle: String, currentArtist: String, currentCoverUrl: String) {
+        if (!isCurrentRemoteSong(songId)) return
+        val requestMediaId = currentMediaId ?: return
         viewModelScope.launch {
             playbackRepository.getSimilarSongs(songId).collect { result ->
+                if (!isCurrentMedia(requestMediaId)) return@collect
                 result.onSuccess { simiSongs ->
                     if (simiSongs.isNotEmpty()) {
                         val currentItem = QueueItem(songId, currentTitle, currentArtist, currentCoverUrl)
@@ -500,8 +554,11 @@ class PlayerViewModel(
 
     // 插播一首相似歌曲到下一首位置
     fun insertSimilarSongs(songId: Long) {
+        if (!isCurrentRemoteSong(songId)) return
+        val requestMediaId = currentMediaId ?: return
         viewModelScope.launch {
             playbackRepository.getSimilarSongs(songId).collect { result ->
+                if (!isCurrentMedia(requestMediaId)) return@collect
                 result.onSuccess { simiSongs ->
                     val firstSong = simiSongs.firstOrNull()
                     if (firstSong != null) {

@@ -1,6 +1,7 @@
 package com.lin0721.linmusic.feature.library.data
 
 import com.lin0721.linmusic.core.contentfilter.ContentFilter
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import com.lin0721.linmusic.core.network.AppError
 import java.io.IOException
 import kotlinx.coroutines.flow.first
@@ -21,10 +22,11 @@ private class FakeLibraryApi(
     override suspend fun getUserRecord(body: UserRecordRequest): UserRecordResponse = error("not used")
     override suspend fun getAlbumSublist(body: AlbumSublistRequest): AlbumSublistResponse = error("not used")
     override suspend fun getUserSubcount(body: com.lin0721.linmusic.core.model.EmptyBody): UserSubcountResponse = error("not used")
-    override suspend fun deletePlaylist(body: PlaylistDeleteRequest): PlaylistActionResponse = delete(body)
+    override suspend fun deletePlaylist(body: PlaylistDeleteRequest, sessionTag: UserSessionTag): PlaylistActionResponse = delete(body)
     override suspend fun updatePlaylistSubscription(
         op: String,
-        body: PlaylistSubscriptionRequest
+        body: PlaylistSubscriptionRequest,
+        sessionTag: UserSessionTag
     ): PlaylistActionResponse = subscription(op, body)
 }
 
@@ -41,7 +43,7 @@ class LibraryRepositoryImplTest {
             contentFilter = unusedContentFilter()
         )
 
-        val result = repository.deletePlaylist(123L).first()
+        val result = repository.deletePlaylist(123L, testSession).first()
 
         assertTrue(result.isSuccess)
         assertEquals("[123]", request?.ids)
@@ -60,7 +62,7 @@ class LibraryRepositoryImplTest {
             contentFilter = unusedContentFilter()
         )
 
-        val result = repository.unsubscribePlaylist(456L).first()
+        val result = repository.unsubscribePlaylist(456L, testSession).first()
 
         assertTrue(result.isSuccess)
         assertEquals("unsubscribe", operation)
@@ -76,7 +78,7 @@ class LibraryRepositoryImplTest {
             contentFilter = unusedContentFilter()
         )
 
-        val error = repository.deletePlaylist(123L).first().exceptionOrNull()
+        val error = repository.deletePlaylist(123L, testSession).first().exceptionOrNull()
 
         assertTrue(error is AppError.BizError)
         assertEquals(400, (error as AppError.BizError).code)
@@ -92,23 +94,27 @@ class LibraryRepositoryImplTest {
             contentFilter = unusedContentFilter()
         )
 
-        val error = repository.unsubscribePlaylist(456L).first().exceptionOrNull()
+        val error = repository.unsubscribePlaylist(456L, testSession).first().exceptionOrNull()
 
         assertTrue(error === AppError.NetworkError)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun `delete rejects non-positive id`() {
-        LibraryRepositoryImpl(FakeLibraryApi(), unusedContentFilter()).deletePlaylist(0L)
+        LibraryRepositoryImpl(FakeLibraryApi(), unusedContentFilter()).deletePlaylist(0L, testSession)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun `unsubscribe rejects non-positive id`() {
-        LibraryRepositoryImpl(FakeLibraryApi(), unusedContentFilter()).unsubscribePlaylist(-1L)
+        LibraryRepositoryImpl(FakeLibraryApi(), unusedContentFilter()).unsubscribePlaylist(-1L, testSession)
     }
 
     /** Delete/subscribe tests never touch the content filter; avoid Android DataStore setup. */
     private fun unusedContentFilter(): ContentFilter {
         return ContentFilter(flowOf(emptySet()))
+    }
+
+    private companion object {
+        val testSession = UserSessionTag(uid = 42L, revision = 1L)
     }
 }

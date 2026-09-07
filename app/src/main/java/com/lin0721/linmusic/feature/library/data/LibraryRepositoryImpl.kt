@@ -1,6 +1,7 @@
 package com.lin0721.linmusic.feature.library.data
 
 import com.lin0721.linmusic.core.contentfilter.ContentFilter
+import com.lin0721.linmusic.core.auth.UserSessionTag
 import com.lin0721.linmusic.core.model.Track
 import com.lin0721.linmusic.core.network.apiFlow
 import kotlinx.coroutines.flow.Flow
@@ -38,12 +39,13 @@ class LibraryRepositoryImpl(
         transform = { it }
     )
 
-    override fun deletePlaylist(id: Long): Flow<Result<Unit>> {
+    override fun deletePlaylist(id: Long, sessionTag: UserSessionTag): Flow<Result<Unit>> {
         require(id > 0) { "playlist id must be positive" }
         return apiFlow(
             request = {
                 apiService.deletePlaylist(
-                    PlaylistDeleteRequest(ids = "[$id]")
+                    body = PlaylistDeleteRequest(ids = "[$id]"),
+                    sessionTag = sessionTag
                 )
             },
             isSuccess = { it.isSuccess },
@@ -53,13 +55,14 @@ class LibraryRepositoryImpl(
         )
     }
 
-    override fun unsubscribePlaylist(id: Long): Flow<Result<Unit>> {
+    override fun unsubscribePlaylist(id: Long, sessionTag: UserSessionTag): Flow<Result<Unit>> {
         require(id > 0) { "playlist id must be positive" }
         return apiFlow(
             request = {
                 apiService.updatePlaylistSubscription(
                     op = "unsubscribe",
-                    body = PlaylistSubscriptionRequest(id = id)
+                    body = PlaylistSubscriptionRequest(id = id),
+                    sessionTag = sessionTag
                 )
             },
             isSuccess = { it.isSuccess },

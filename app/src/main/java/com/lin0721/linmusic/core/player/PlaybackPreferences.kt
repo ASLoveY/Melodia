@@ -21,6 +21,8 @@ private val Context.dataStore by preferencesDataStore(name = "playback_prefs")
 
 data class PlaybackState(
     val songId: Long = -1,
+    val mediaId: String? = null,
+    val localUri: String? = null,
     val title: String = "",
     val artist: String = "",
     val coverUrl: String = "",
@@ -37,6 +39,8 @@ class PlaybackPreferences(private val context: Context) {
 
     companion object {
         private val KEY_SONG_ID = longPreferencesKey("last_song_id")
+        private val KEY_MEDIA_ID = stringPreferencesKey("last_media_id")
+        private val KEY_LOCAL_URI = stringPreferencesKey("last_local_uri")
         private val KEY_TITLE = stringPreferencesKey("last_song_title")
         private val KEY_ARTIST = stringPreferencesKey("last_song_artist")
         private val KEY_COVER = stringPreferencesKey("last_song_cover")
@@ -51,6 +55,8 @@ class PlaybackPreferences(private val context: Context) {
     val playbackState: Flow<PlaybackState> = context.dataStore.data.map { prefs ->
         PlaybackState(
             songId = prefs[KEY_SONG_ID] ?: -1,
+            mediaId = prefs[KEY_MEDIA_ID],
+            localUri = prefs[KEY_LOCAL_URI],
             title = prefs[KEY_TITLE] ?: "",
             artist = prefs[KEY_ARTIST] ?: "",
             coverUrl = prefs[KEY_COVER] ?: "",
@@ -68,6 +74,8 @@ class PlaybackPreferences(private val context: Context) {
     suspend fun savePlaybackState(state: PlaybackState) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SONG_ID] = state.songId
+            if (state.mediaId == null) prefs.remove(KEY_MEDIA_ID) else prefs[KEY_MEDIA_ID] = state.mediaId
+            if (state.localUri == null) prefs.remove(KEY_LOCAL_URI) else prefs[KEY_LOCAL_URI] = state.localUri
             prefs[KEY_TITLE] = state.title
             prefs[KEY_ARTIST] = state.artist
             prefs[KEY_COVER] = state.coverUrl
