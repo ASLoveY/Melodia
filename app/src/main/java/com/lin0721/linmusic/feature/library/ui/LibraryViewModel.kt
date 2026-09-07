@@ -15,6 +15,8 @@ import com.lin0721.linmusic.core.player.PlayerManager
 import com.lin0721.linmusic.core.network.ResourceProvider
 import com.lin0721.linmusic.core.network.toUserMessage
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -35,7 +37,8 @@ data class LibraryItem(
     val trackCount: Int = 0,
     val playCount: Long = 0,
     val isLikedSongs: Boolean = false,
-    val isOwnedByMe: Boolean = false
+    val isOwnedByMe: Boolean = false,
+    val ownerId: Long? = null
 )
 
 enum class LibraryFilter {
@@ -95,9 +98,36 @@ class LibraryViewModel(
     private val _isGridView = MutableStateFlow(getGridViewFromPrefs())
     val isGridView: StateFlow<Boolean> = _isGridView.asStateFlow()
 
+    private var activeUserId: Long? = null
+    private var libraryLoadJob: Job? = null
+    private var libraryLoadGeneration = 0L
+    private val playlistRemoval = PlaylistRemovalCoordinator(
+        scope = viewModelScope,
+        currentUserId = { activeUserId },
+        remove = { id, kind ->
+            val result = when (kind) {
+                PlaylistRemovalKind.DELETE -> libraryRepository.deletePlaylist(id)
+                PlaylistRemovalKind.UNSUBSCRIBE -> libraryRepository.unsubscribePlaylist(id)
+            }.firstOrNull() ?: Result.failure(IllegalStateException("操作未完成，请重试"))
+            result.fold(
+                onSuccess = { Result.success(Unit) },
+                onFailure = { Result.failure(IllegalStateException(it.toUserMessage(resourceProvider))) }
+            )
+        },
+        onRemoved = ::removePlaylistFromLibrary
+    )
+    val playlistRemovalState = playlistRemoval.state
+
     init {
         viewModelScope.launch {
             userPreferences.userProfile.collect { profile ->
+                if (activeUserId != profile?.uid) {
+                    activeUserId = profile?.uid
+                    libraryLoadGeneration++
+                    libraryLoadJob?.cancel()
+                    playlistRemoval.reset()
+                    _uiState.value = LibraryUiState.Loading
+                }
                 if (profile != null) {
                     loadLibraryData(profile)
                 } else {
@@ -128,8 +158,10 @@ class LibraryViewModel(
     fun loadLibraryData(profileOverride: UserProfile? = null) {
         val profile = profileOverride ?: userProfile.value ?: return
         val isRefresh = _uiState.value is LibraryUiState.Success
+        val generation = ++libraryLoadGeneration
+        libraryLoadJob?.cancel()
 
-        viewModelScope.launch {
+        libraryLoadJob = viewModelScope.launch {
             if (!isRefresh) {
                 _uiState.value = LibraryUiState.Loading
             }
@@ -167,9 +199,12 @@ class LibraryViewModel(
                 val artists = artistsDeferred.await()
                 val albums = albumsDeferred.await()
                 val subcount = subcountDeferred.await()
+                if (generation != libraryLoadGeneration || activeUserId != profile.uid) return@launch
 
                 // 数据归一化 (Mapping)
                 val mappedPlaylists = playlists.mapIndexed { index, playlist ->
+                    val ownerId = playlist.creator?.userId?.takeIf { it > 0 }
+                        ?: playlist.userId.takeIf { it > 0 }
                     LibraryItem(
                         id = playlist.id.toString(),
                         title = playlist.name,
@@ -179,8 +214,10 @@ class LibraryViewModel(
                         updateTime = playlist.updateTime,
                         trackCount = playlist.trackCount,
                         playCount = playlist.playCount,
-                        isLikedSongs = index == 0 && playlist.creator?.userId == profile.uid,
-                        isOwnedByMe = playlist.creator?.userId == profile.uid
+                        isLikedSongs = playlist.specialType == 5 ||
+                            (playlist.specialType == null && index == 0 && ownerId == profile.uid),
+                        isOwnedByMe = ownerId == profile.uid,
+                        ownerId = ownerId
                     )
                 }.toMutableList()
 
@@ -238,7 +275,10 @@ class LibraryViewModel(
 
                 applyFilterAndSort()
 
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                if (generation != libraryLoadGeneration || activeUserId != profile.uid) return@launch
                 AppLogger.e(TAG, "音乐库加载最终失败 isRefresh=$isRefresh", e)
                 if (isRefresh) {
                     _toastEvent.emit(e.toUserMessage(resourceProvider))
@@ -247,6 +287,35 @@ class LibraryViewModel(
                 }
             }
         }
+    }
+
+    fun requestPlaylistRemoval(item: LibraryItem) {
+        val current = (_uiState.value as? LibraryUiState.Success)?.allItems
+            ?.firstOrNull { it.id == item.id && it.type == LibraryItemType.PLAYLIST } ?: return
+        val id = current.id.toLongOrNull() ?: return
+        val owner = current.ownerId ?: return
+        playlistRemoval.request(PlaylistRemovalTarget(id, current.title, owner, current.isLikedSongs))
+    }
+
+    fun confirmPlaylistRemoval() = playlistRemoval.confirm()
+    fun dismissPlaylistRemoval() = playlistRemoval.dismiss()
+
+    private fun removePlaylistFromLibrary(id: Long) {
+        // 取消旧加载，避免删除前发起的迟到请求把条目重新放回列表。
+        libraryLoadGeneration++
+        libraryLoadJob?.cancel()
+        _pinnedIds.value = _pinnedIds.value - id.toString()
+        savePinnedIdsToPrefs(_pinnedIds.value)
+        _uiState.update { state ->
+            if (state is LibraryUiState.Success) {
+                val removed = state.allItems.any { it.type == LibraryItemType.PLAYLIST && it.id == id.toString() }
+                state.copy(
+                    allItems = state.allItems.filterNot { it.type == LibraryItemType.PLAYLIST && it.id == id.toString() },
+                    playlistCount = (state.playlistCount - if (removed) 1 else 0).coerceAtLeast(0)
+                )
+            } else state
+        }
+        applyFilterAndSort()
     }
 
     private fun applyFilterAndSort() {

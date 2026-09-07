@@ -13,7 +13,7 @@ val localModule = module {
     single { PlaybackPreferences(androidContext()) }
     single { UserPreferences(androidContext()) }
     single { SettingsPreferences(androidContext()) }
-    single { ContentFilter(get()) }
+    single { ContentFilter(get<UserPreferences>()) }
     single { ResourceProvider(androidContext()) }
     single { SearchHistoryPreferences(androidContext()) }
 }

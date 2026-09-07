@@ -81,6 +81,7 @@ fun LibraryScreen(
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val isGridView by viewModel.isGridView.collectAsStateWithLifecycle()
+    val playlistRemovalState by viewModel.playlistRemovalState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var showLoginSheet by remember { mutableStateOf(false) }
@@ -100,6 +101,9 @@ fun LibraryScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var isSearchActive by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
+    var itemActions by remember { mutableStateOf<LibraryItem?>(null) }
+
+    LaunchedEffect(userProfile?.uid) { itemActions = null }
 
     val scope = rememberCoroutineScope()
 
@@ -364,7 +368,8 @@ fun LibraryScreen(
                                                     } else {
                                                         onAlbumClick(item.id.toLong())
                                                     }
-                                                }
+                                                },
+                                                onLongClick = { itemActions = item }
                                             )
                                         }
                                         repeat(3 - row.size) {
@@ -392,7 +397,7 @@ fun LibraryScreen(
                                             }
                                         },
                                         onLongClick = {
-                                            viewModel.togglePin(item.id)
+                                            itemActions = item
                                         }
                                     )
                                 }
@@ -401,6 +406,28 @@ fun LibraryScreen(
                     }
                 }
             }
+
+        itemActions?.let { item ->
+            LibraryItemActionsSheet(
+                item = item,
+                onDismiss = { itemActions = null },
+                onTogglePin = {
+                    viewModel.togglePin(item.id)
+                    itemActions = null
+                },
+                onRemovePlaylist = {
+                    itemActions = null
+                    viewModel.requestPlaylistRemoval(item)
+                }
+            )
+        }
+        (playlistRemovalState as? PlaylistRemovalState.Confirm)?.let { state ->
+            LibraryPlaylistRemovalDialog(
+                state = state,
+                onConfirm = viewModel::confirmPlaylistRemoval,
+                onDismiss = viewModel::dismissPlaylistRemoval
+            )
+        }
 
         // 创建歌单对话框
         if (showCreateDialog) {

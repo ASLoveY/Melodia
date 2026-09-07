@@ -14,4 +14,10 @@ interface LibraryRepository {
 
     // 获取各分类收藏数
     fun getUserSubcount(): Flow<Result<UserSubcountResponse>>
+
+    // 删除当前用户创建的歌单
+    fun deletePlaylist(id: Long): Flow<Result<Unit>>
+
+    // 取消收藏歌单
+    fun unsubscribePlaylist(id: Long): Flow<Result<Unit>>
 }

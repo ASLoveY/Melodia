@@ -37,4 +37,35 @@ class LibraryRepositoryImpl(
         code = { it.code },
         transform = { it }
     )
+
+    override fun deletePlaylist(id: Long): Flow<Result<Unit>> {
+        require(id > 0) { "playlist id must be positive" }
+        return apiFlow(
+            request = {
+                apiService.deletePlaylist(
+                    PlaylistDeleteRequest(ids = "[$id]")
+                )
+            },
+            isSuccess = { it.isSuccess },
+            code = { it.code },
+            msg = { it.message },
+            transform = { Unit }
+        )
+    }
+
+    override fun unsubscribePlaylist(id: Long): Flow<Result<Unit>> {
+        require(id > 0) { "playlist id must be positive" }
+        return apiFlow(
+            request = {
+                apiService.updatePlaylistSubscription(
+                    op = "unsubscribe",
+                    body = PlaylistSubscriptionRequest(id = id)
+                )
+            },
+            isSuccess = { it.isSuccess },
+            code = { it.code },
+            msg = { it.message },
+            transform = { Unit }
+        )
+    }
 }

@@ -39,5 +39,6 @@ data class UserPlaylist(
     val trackCount: Int = 0,
     val userId: Long = 0,
     val creator: PlaylistCreator? = null,
-    val updateTime: Long = 0
+    val updateTime: Long = 0,
+    val specialType: Int? = null
 )

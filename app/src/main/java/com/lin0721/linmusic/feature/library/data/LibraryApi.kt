@@ -5,6 +5,7 @@ import com.lin0721.linmusic.core.model.EmptyBody
 import com.lin0721.linmusic.core.model.Track
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
+import retrofit2.http.Path
 import retrofit2.http.POST
 
 // 音乐库（收藏专辑/听歌排行/收藏数）相关的网易云 Retrofit 接口定义。
@@ -26,6 +27,19 @@ interface LibraryApi {
     suspend fun getUserSubcount(
         @Body body: EmptyBody = EmptyBody()
     ): UserSubcountResponse
+
+    // 删除当前用户创建的歌单。网易云接口要求 ids 是 JSON 数组字符串，例如 "[123]"。
+    @POST("/weapi/playlist/remove")
+    suspend fun deletePlaylist(
+        @Body body: PlaylistDeleteRequest
+    ): PlaylistActionResponse
+
+    // 取消收藏歌单，路径与 playlist 域的 PlaylistApi 保持一致。
+    @POST("/eapi/playlist/{op}")
+    suspend fun updatePlaylistSubscription(
+        @Path("op") op: String,
+        @Body body: PlaylistSubscriptionRequest
+    ): PlaylistActionResponse
 }
 
 // ======================= 听歌排行 DTOs =======================
@@ -88,6 +102,26 @@ data class UserSubcountResponse(
     val createPlaylistCount: Int = 0,
     val subPlaylistCount: Int = 0,
     val albumCount: Int = 0
+) {
+    val isSuccess: Boolean get() = code == 200
+}
+
+// ======================= 歌单操作 DTOs =======================
+
+@Serializable
+data class PlaylistDeleteRequest(
+    val ids: String
+)
+
+@Serializable
+data class PlaylistSubscriptionRequest(
+    val id: Long
+)
+
+@Serializable
+data class PlaylistActionResponse(
+    val code: Int = 0,
+    val message: String? = null
 ) {
     val isSuccess: Boolean get() = code == 200
 }

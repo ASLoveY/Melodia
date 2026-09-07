@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.ButtonDefaults
@@ -31,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +41,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import com.lin0721.linmusic.core.ui.components.CoverPlaceholder
 import com.lin0721.linmusic.core.ui.components.MelodiaButton
+import com.lin0721.linmusic.core.ui.components.MelodiaIconButton
+import com.lin0721.linmusic.R
 import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
@@ -353,19 +357,28 @@ fun LibraryItemRow(
                 )
             }
         }
+        MelodiaIconButton(onClick = onLongClick) {
+            Icon(
+                Icons.Default.MoreVert,
+                contentDescription = stringResource(R.string.library_more_actions, item.title),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LibraryGridItem(
     item: LibraryItem,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
     val shape = if (item.type == LibraryItemType.ARTIST) CircleShape else RoundedCornerShape(RadiusCompact)
 
     Column(
-        modifier = modifier.pressable(MelodiaPress.Card, onClick = onClick),
+        modifier = modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (item.isLikedSongs) {
