@@ -32,6 +32,7 @@ class MediaControllerHolder(private val context: Context) {
     val isConnected: Boolean get() = controller != null
 
     val currentPosition: Long get() = controller?.currentPosition ?: 0L
+    val currentMediaId: String? get() = controller?.currentMediaItem?.mediaId
 
     // 控制器未连接时返回 null，供调用方回退到本地缓存进度
     val currentPositionOrNull: Long? get() = controller?.currentPosition

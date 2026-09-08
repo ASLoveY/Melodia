@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.recent.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import com.lin0721.linmusic.core.ui.theme.AppText
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -200,7 +202,7 @@ private fun DayHeader(label: String) {
         fontWeight = FontWeight.Bold,
         modifier = Modifier
             .fillMaxWidth()
-            .background(AppBackground)
+            .background(AppPageBackground)
             .padding(horizontal = MelodiaSpacing.md, vertical = MelodiaSpacing.sm)
     )
 }

@@ -5,7 +5,11 @@ import android.content.Intent
 import android.media.AudioManager
 import android.os.Bundle
 import androidx.annotation.OptIn
-import androidx.media3.common.ForwardingPlayer
+import com.lin0721.linmusic.core.player.effects.CrossfadePlayer
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
@@ -36,6 +40,7 @@ import org.koin.android.ext.android.inject
 
 private const val TAG = "MelodiaPlaybackService"
 
+@OptIn(UnstableApi::class)
 class MelodiaPlaybackService : MediaSessionService() {
 
     private val playerManager: PlayerManager by inject()
@@ -48,7 +53,13 @@ class MelodiaPlaybackService : MediaSessionService() {
     private var isLikedListLoaded = false
 
     private var player: Player? = null
-    private var exoPlayer: ExoPlayer? = null
+    private var crossfade: CrossfadePlayer? = null
+    private val exoPlayer: ExoPlayer? get() = crossfade?.activeDeck
+    private val noisyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) crossfade?.pauseForNoisyOutput()
+        }
+    }
     private var mediaSession: MediaSession? = null
 
     @OptIn(UnstableApi::class)
@@ -91,49 +102,16 @@ class MelodiaPlaybackService : MediaSessionService() {
 
         // 仅为网络上游加缓存；content/file URI 交给 DefaultDataSource 原生读取，避免重复缓存本地文件。
         val defaultDataSourceFactory = DefaultDataSource.Factory(this, dynamicDataSourceFactory)
-        val localExoPlayer = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(defaultDataSourceFactory))
-            .build()
-        this.exoPlayer = localExoPlayer
-
-        val forwardingPlayer = object : ForwardingPlayer(localExoPlayer) {
-            override fun seekToNext() {
-                playerManager.playNext()
-            }
-
-            override fun seekToNextMediaItem() {
-                playerManager.playNext()
-            }
-
-            override fun seekToPrevious() {
-                playerManager.playPrevious()
-            }
-
-            override fun seekToPreviousMediaItem() {
-                playerManager.playPrevious()
-            }
-
-            override fun getAvailableCommands(): Player.Commands {
-                return super.getAvailableCommands().buildUpon()
-                    .add(Player.COMMAND_SEEK_TO_NEXT)
-                    .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
-                    .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-                    .build()
-            }
-
-            override fun isCommandAvailable(command: Int): Boolean {
-                return when (command) {
-                    Player.COMMAND_SEEK_TO_NEXT,
-                    Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-                    Player.COMMAND_SEEK_TO_PREVIOUS,
-                    Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> true
-                    else -> super.isCommandAvailable(command)
-                }
-            }
-        }
-            
+        val forwardingPlayer = CrossfadePlayer(this, defaultDataSourceFactory,
+            onNext = playerManager::playNext, onPrevious = playerManager::playPrevious,
+            acceptHandoff = playerManager::acceptCrossfade,
+            onInvalidatePreparation = playerManager::invalidatePreparation,
+            isTransitionCurrent = playerManager::isTransitionCurrent)
+        crossfade = forwardingPlayer
+        playerManager.crossfadePlayer = forwardingPlayer
         player = forwardingPlayer
+        serviceScope.launch { settingsPreferences.playbackEffects.collect { forwardingPlayer.effects = it } }
+        ContextCompat.registerReceiver(this, noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), ContextCompat.RECEIVER_NOT_EXPORTED)
 
         // 点击通知时跳转回应用；REORDER_TO_FRONT 避免每次新建 Activity 实例导致重新加载
         val sessionActivityIntent = Intent(this, MainActivity::class.java).apply {
@@ -152,7 +130,7 @@ class MelodiaPlaybackService : MediaSessionService() {
             .build()
 
         // 监听歌曲切换以更新控制栏上的红心图标状态
-        localExoPlayer.addListener(object : Player.Listener {
+        forwardingPlayer.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                 super.onMediaItemTransition(mediaItem, reason)
                 if (mediaItem?.isLocalAudio != true) {
@@ -194,8 +172,10 @@ class MelodiaPlaybackService : MediaSessionService() {
             release()
             mediaSession = null
         }
-        exoPlayer?.release()
-        exoPlayer = null
+        unregisterReceiver(noisyReceiver)
+        crossfade?.release()
+        crossfade = null
+        playerManager.crossfadePlayer = null
         player = null
         super.onDestroy()
     }
@@ -391,7 +371,7 @@ class MelodiaPlaybackService : MediaSessionService() {
                         audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
                             .firstOrNull { it.id == deviceId }
                     }
-                    exoPlayer?.setPreferredAudioDevice(targetDevice)
+                    crossfade?.setPreferredAudioDevice(targetDevice)
                     return com.google.common.util.concurrent.Futures.immediateFuture(
                         SessionResult(SessionResult.RESULT_SUCCESS)
                     )

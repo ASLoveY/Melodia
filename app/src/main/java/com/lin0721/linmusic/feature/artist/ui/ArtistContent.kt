@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.artist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
@@ -143,7 +145,7 @@ fun ArtistContent(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { translationY = backdropCoverThresholdPx - backdropCoveredPx }
-                .background(MaterialTheme.colorScheme.background)
+                .background(AppPageBackground)
         )
 
         // 滚动视口列表

@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.podcast.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -96,7 +98,7 @@ fun RadioDetailScreen(
             .collect { if (it) viewModel.loadMore() }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier.fillMaxSize().background(AppPageBackground)) {
         when (val state = uiState) {
             is RadioDetailUiState.Loading -> Box(
                 modifier = Modifier.fillMaxSize(),

@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.search.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -146,7 +148,7 @@ fun SearchScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(AppPageBackground)
             .statusBarsPadding()
             .pointerInput(Unit) {
                 awaitPointerEventScope {
@@ -392,7 +394,7 @@ private fun SuggestionDropdown(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
+            .background(AppPageBackground)
     ) {
         suggestions.forEach { suggestion ->
             Row(

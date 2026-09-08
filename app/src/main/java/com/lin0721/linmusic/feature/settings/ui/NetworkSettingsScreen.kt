@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.settings.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import com.lin0721.linmusic.core.ui.theme.AppText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -83,7 +85,7 @@ fun NetworkSettingsView(viewModel: SettingsViewModel) {
                                 .width(150.dp)
                                 .height(36.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(AppBackground)
+                                .background(AppPageBackground)
                                 .padding(horizontal = 12.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {

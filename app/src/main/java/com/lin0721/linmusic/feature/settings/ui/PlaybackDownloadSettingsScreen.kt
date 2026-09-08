@@ -13,12 +13,14 @@ import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 fun PlaybackDownloadSettingsView(viewModel: SettingsViewModel) {
     val autoPlayNext by viewModel.autoPlayNext.collectAsStateWithLifecycle()
     val streamCacheEnabled by viewModel.streamCacheEnabled.collectAsStateWithLifecycle()
+    val effects by viewModel.playbackEffects.collectAsStateWithLifecycle()
 
     // 渲染播放与下载的子设置项
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(MelodiaSpacing.md),
         contentPadding = PaddingValues(top = 8.dp, bottom = LocalBottomOverlayInset.current + 16.dp)
     ) {
+        item { PlaybackEffectsSettingsContent(effects, viewModel::updatePlaybackEffects) }
         item {
             SettingsGroupCard("播放参数") {
                 SettingsSwitchRow(

@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.home.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -101,7 +103,7 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(AppPageBackground)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // 顶栏跨 tab 只渲染一次，切 tab 时不会被重建，FilterPills 的展开动画状态才能保留

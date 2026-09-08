@@ -10,6 +10,10 @@ import com.lin0721.linmusic.core.log.AppLogger
 import com.lin0721.linmusic.core.network.AppError
 import com.lin0721.linmusic.core.player.data.PlaybackRepository
 import com.lin0721.linmusic.core.preferences.SettingsPreferences
+import com.lin0721.linmusic.core.preferences.PlaybackEffectsSettings
+import com.lin0721.linmusic.core.player.effects.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,7 +34,7 @@ private val NETWORK_RETRY_DELAYS_MS = longArrayOf(2000L, 5000L, 10000L)
 private const val PREFETCH_URL_WINDOW_MS = 8000L
 
 // 预取到的下一首播放链接，按队列稳定身份校验有效性
-private data class PrefetchedUrl(val stableKey: String, val url: String)
+private data class PrefetchedUrl(val stableKey: String, val url: String, val fingerprint: String = "")
 
 // 播放门面：对外暴露播放状态与控制入口，队列、控制器、进度、持久化等职责交由协作者承担
 class PlayerManager(
@@ -89,6 +93,29 @@ class PlayerManager(
     private var prefetchJob: Job? = null
     private var prefetchedNextUrl: PrefetchedUrl? = null
     private var prefetchTriggeredForKey: String? = null
+    private var queueGeneration = 0L
+    private var effects = PlaybackEffectsSettings()
+    var crossfadePlayer: CrossfadePlayer? = null
+    private var handoffPosition: Pair<String, Long>? = null
+
+    fun invalidatePreparation() {
+        queueGeneration++
+        prefetchJob?.cancel(); prefetchJob = null
+        prefetchedNextUrl = null; prefetchTriggeredForKey = null
+    }
+
+    fun isTransitionCurrent(value: PreparedTransition): Boolean = value.generation == queueGeneration &&
+        playbackQueue.currentItem()?.stableKey == value.currentKey && playbackQueue.nextItemByMode()?.stableKey == value.nextKey &&
+        playMode.value != PlayMode.SINGLE_LOOP
+
+    fun acceptCrossfade(value: PreparedTransition, positionMs: Long): Boolean {
+        if (!isTransitionCurrent(value)) return false
+        playbackQueue.setCurrentIndex(playbackQueue.nextIndex())
+        handoffPosition = value.nextKey to positionMs
+        invalidatePreparation()
+        stateStore.saveQueue(playbackQueue)
+        return true
+    }
 
     // setMediaItem during cold restore can dispatch PLAYLIST_CHANGED before the user starts
     // playback. Keep the saved position through that callback without preparing the URI.
@@ -103,6 +130,13 @@ class PlayerManager(
     init {
         AppLogger.i(TAG, "PlayerManager 初始化 instanceId=${System.identityHashCode(this)}")
         networkGuard.register()
+        scope.launch { settingsPreferences.playbackEffects.collect { effects = it } }
+        scope.launch {
+            combine(playbackQueue.items, playbackQueue.playMode) { items, mode -> items to mode }.collect {
+                crossfadePlayer?.cancelPreparation()
+                invalidatePreparation()
+            }
+        }
 
         scope.launch {
             playbackQueue.setPlayMode(stateStore.loadPlayMode())
@@ -125,9 +159,9 @@ class PlayerManager(
             onTick = { positionMs ->
                 val dur = progress.duration.value
                 val songId = _currentTrack.value?.mediaId?.toLongOrNull() ?: -1L
-                if (dur > 0L && songId != -1L) {
+                if (dur > 0L) {
                     val remainingMs = dur - positionMs
-                    roaming.onProgressTick(songId, remainingMs)
+                    if (songId != -1L) roaming.onProgressTick(songId, remainingMs)
                     maybePrefetchNextTrackUrl(remainingMs)
                 }
             }
@@ -318,6 +352,10 @@ class PlayerManager(
     fun togglePlayPause() {
         val item = _currentTrack.value ?: return
         if (!_isPlaying.value) {
+            if (controllerHolder.currentMediaId == item.mediaId && controllerHolder.playbackState in listOf(Player.STATE_READY, Player.STATE_BUFFERING)) {
+                resume()
+                return
+            }
             // 重启后队列为空，从恢复的 track 元数据重建 1 项队列。Local MediaItem 的
             // content URI 放在 metadata extras 中，不能用 toLongOrNull 丢掉这条曲目。
             if (playbackQueue.isEmpty) {
@@ -428,10 +466,12 @@ class PlayerManager(
     }
 
     private fun saveQueueState() {
+        crossfadePlayer?.cancelPreparation()
+        invalidatePreparation()
         stateStore.saveQueue(playbackQueue)
     }
 
-    private fun fetchUrlAndPlay(index: Int, startPosition: Long = 0, networkRetryAttempt: Int = 0, prefetchedUrl: String? = null) {
+    private fun fetchUrlAndPlay(index: Int, startPosition: Long = 0, networkRetryAttempt: Int = 0, prefetchedUrl: String? = null, prefetchedFingerprint: String = "") {
         val item = playbackQueue.itemAt(index) ?: return
 
         if (pendingRestoredMediaId != null && pendingRestoredMediaId != item.stableKey) {
@@ -463,7 +503,7 @@ class PlayerManager(
                     return@launch
                 }
                 controllerHolder.playItem(
-                    item.toMediaItem(localUri, playbackQueue.playContext.value),
+                    item.toMediaItem(localUri, playbackQueue.playContext.value).withLoudnessKey(localAudioFingerprint(context, localUri)),
                     playbackQueue.playMode.value,
                     startPosition
                 )
@@ -476,14 +516,14 @@ class PlayerManager(
 
             // 命中预取缓存时跳过网络请求，最大限度缩短切歌间隙
             if (prefetchedUrl != null) {
-                val mediaItem = item.toMediaItem(prefetchedUrl, playbackQueue.playContext.value)
+                val mediaItem = item.toMediaItem(prefetchedUrl, playbackQueue.playContext.value).withLoudnessKey(prefetchedFingerprint)
                 controllerHolder.playItem(mediaItem, playbackQueue.playMode.value, startPosition)
                 return@launch
             }
 
-            repository.getSongUrl(item.songId).collect { result ->
-                result.onSuccess { url ->
-                    val mediaItem = item.toMediaItem(url, playbackQueue.playContext.value)
+            repository.resolveSong(item.songId).collect { result ->
+                result.onSuccess { source ->
+                    val mediaItem = item.toMediaItem(source.url, playbackQueue.playContext.value).withLoudnessKey(source.fingerprint)
                     controllerHolder.playItem(mediaItem, playbackQueue.playMode.value, startPosition)
                 }.onFailure { throwable ->
                     AppLogger.w(TAG, "获取播放URL失败 songId=${item.songId} index=$index networkRetryAttempt=$networkRetryAttempt", throwable)
@@ -499,20 +539,27 @@ class PlayerManager(
 
     // 临近播完时提前预取下一首链接，供 playNextOnEnded 命中缓存零等待衔接
     private fun maybePrefetchNextTrackUrl(remainingMs: Long) {
-        if (remainingMs > PREFETCH_URL_WINDOW_MS) return
+        if (remainingMs > if (effects.crossfadeEnabled) maxOf(10_000L, effects.durationMs * 3) else PREFETCH_URL_WINDOW_MS) return
         if (playbackQueue.playMode.value == PlayMode.SINGLE_LOOP) return
         val nextItem = playbackQueue.nextItemByMode() ?: return
-        if (nextItem.isLocal) return
         if (prefetchTriggeredForKey == nextItem.stableKey) return
         prefetchTriggeredForKey = nextItem.stableKey
+        val generation = queueGeneration
+        val currentKey = playbackQueue.currentItem()?.stableKey ?: return
 
         prefetchJob?.cancel()
         prefetchJob = scope.launch {
-            repository.getSongUrl(nextItem.songId).collect { result ->
-                result.onSuccess { url ->
-                    prefetchedNextUrl = PrefetchedUrl(nextItem.stableKey, url)
-                }
+            val source = if (nextItem.isLocal) {
+                val uri = nextItem.localUri ?: return@launch
+                com.lin0721.linmusic.core.player.data.ResolvedAudioSource(uri, localAudioFingerprint(context, uri))
+            } else {
+                if (networkGuard.blockPlaybackOnMobile()) return@launch
+                repository.resolveSong(nextItem.songId).first().getOrNull() ?: return@launch
             }
+            if (queueGeneration != generation || playbackQueue.nextItemByMode()?.stableKey != nextItem.stableKey) return@launch
+            prefetchedNextUrl = PrefetchedUrl(nextItem.stableKey, source.url, source.fingerprint)
+            if (effects.crossfadeEnabled) crossfadePlayer?.prepareNext(PreparedTransition(generation, currentKey, nextItem.stableKey,
+                nextItem.toMediaItem(source.url, playbackQueue.playContext.value).withLoudnessKey(source.fingerprint)))
         }
     }
 
@@ -522,9 +569,9 @@ class PlayerManager(
         consecutiveErrors = 0
         val nextIndex = playbackQueue.nextIndex()
         val nextItem = playbackQueue.itemAt(nextIndex)
-        val cachedUrl = prefetchedNextUrl?.takeIf { it.stableKey == nextItem?.stableKey }?.url
+        val cached = prefetchedNextUrl?.takeIf { it.stableKey == nextItem?.stableKey }
         prefetchedNextUrl = null
-        fetchUrlAndPlay(nextIndex, prefetchedUrl = cachedUrl)
+        fetchUrlAndPlay(nextIndex, prefetchedUrl = cached?.url, prefetchedFingerprint = cached?.fingerprint.orEmpty())
     }
 
     // 网络类失败原地重试同一首（退避延迟），重试耗尽后不放弃，转为等待网络恢复自动续播
@@ -648,11 +695,16 @@ class PlayerManager(
         reportPlayedTrack()
         resetTrackTiming()
         _currentTrack.value = mediaItem
+        val incomingPosition = handoffPosition?.takeIf { it.first == mediaItem?.mediaId }?.second
+        handoffPosition = null
+        if (incomingPosition != null) trackStartElapsedMs -= incomingPosition
         playbackQueue.setPlayContext(mediaItem?.mediaMetadata?.extras?.getString("playContext"))
         if (mediaItem != null) {
             reportStartPlay(mediaItem)
             val pendingPosition = pendingRestoredPositionMs
-            if (pendingRestoredMediaId == mediaItem.mediaId && pendingPosition != null) {
+            if (incomingPosition != null) {
+                progress.setPosition(incomingPosition)
+            } else if (pendingRestoredMediaId == mediaItem.mediaId && pendingPosition != null) {
                 progress.setPosition(pendingPosition)
             } else if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
                 // 切歌过渡时，应当立即将当前进度重置，防止读取上一首残留位置或缓冲位置

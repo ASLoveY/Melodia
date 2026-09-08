@@ -207,6 +207,7 @@ fun MelodiaApp() {
                         .fillMaxSize()
                         .then(if (playerSheet.isOpen) Modifier.haze(hazeState) else Modifier)
                 ) {
+                    com.lin0721.linmusic.core.ui.theme.AppWallpaper(enabled = navigation.currentScreen != Screen.MvPlayer) {
                     MelodiaNavHost(
                         currentScreen = navigation.currentScreen,
                         homeViewModel = viewModel,
@@ -234,6 +235,8 @@ fun MelodiaApp() {
                         onNavigateToSettings = { navigation.navigateTo(Screen.Settings) },
                         onBack = { navigation.navigateBack() }
                     )
+
+                    }
 
                     // 创建菜单遮罩
                     if (showCreateSheet) {

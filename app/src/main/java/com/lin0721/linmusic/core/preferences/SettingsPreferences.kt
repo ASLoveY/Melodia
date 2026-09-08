@@ -17,6 +17,11 @@ private val Context.settingsDataStore by preferencesDataStore(name = "settings_p
 class SettingsPreferences(private val context: Context) {
 
     companion object {
+        private val KEY_CROSSFADE = booleanPreferencesKey("crossfade_enabled")
+        private val KEY_CROSSFADE_SECONDS = intPreferencesKey("crossfade_seconds")
+        private val KEY_NORMALIZATION = booleanPreferencesKey("normalization_enabled")
+        private val KEY_BACKGROUND_PATH = stringPreferencesKey("background_path")
+        private val KEY_BACKGROUND_TRANSPARENCY = intPreferencesKey("background_transparency")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         // Wi-Fi 播放音质 KEY，默认 "lossless"
         private val KEY_WIFI_QUALITY = stringPreferencesKey("wifi_quality")
@@ -64,6 +69,28 @@ class SettingsPreferences(private val context: Context) {
         private val KEY_ALLOW_PRERELEASE_CHANNEL = booleanPreferencesKey("allow_prerelease_channel")
         // 用户主动忽略的更新版本 tag，默认空串表示未忽略任何版本
         private val KEY_IGNORED_UPDATE_TAG = stringPreferencesKey("ignored_update_tag")
+    }
+
+    val playbackEffects: Flow<PlaybackEffectsSettings> = context.settingsDataStore.data.map {
+        PlaybackEffectsSettings(it[KEY_CROSSFADE] ?: true, (it[KEY_CROSSFADE_SECONDS] ?: 3).coerceIn(1, 12), it[KEY_NORMALIZATION] ?: true)
+    }
+
+    suspend fun savePlaybackEffects(value: PlaybackEffectsSettings) {
+        context.settingsDataStore.edit {
+            it[KEY_CROSSFADE] = value.crossfadeEnabled
+            it[KEY_CROSSFADE_SECONDS] = value.crossfadeSeconds.coerceIn(1, 12)
+            it[KEY_NORMALIZATION] = value.normalizationEnabled
+        }
+    }
+
+    val background: Flow<BackgroundSettings> = context.settingsDataStore.data.map {
+        BackgroundSettings(it[KEY_BACKGROUND_PATH], (it[KEY_BACKGROUND_TRANSPARENCY] ?: 70).coerceIn(0, 100))
+    }
+    suspend fun saveBackgroundImage(path: String?) {
+        context.settingsDataStore.edit { if (path == null) it.remove(KEY_BACKGROUND_PATH) else it[KEY_BACKGROUND_PATH] = path }
+    }
+    suspend fun saveBackgroundTransparency(value: Int) {
+        context.settingsDataStore.edit { it[KEY_BACKGROUND_TRANSPARENCY] = value.coerceIn(0, 100) }
     }
 
     val themeMode: Flow<AppThemeMode> = context.settingsDataStore.data.map { prefs ->

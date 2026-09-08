@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.artist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,7 +82,7 @@ fun ArtistAlbumRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .background(MaterialTheme.colorScheme.background)
+            .background(AppPageBackground)
             .padding(horizontal = MelodiaSpacing.md, vertical = MelodiaSpacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.artist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
@@ -31,7 +33,7 @@ fun LazyListScope.artistMvTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(280.dp)
-                    .background(MaterialTheme.colorScheme.background)
+                    .background(AppPageBackground)
                     .padding(vertical = 48.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center

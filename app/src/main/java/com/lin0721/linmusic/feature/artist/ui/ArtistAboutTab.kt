@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.artist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,7 +31,7 @@ fun LazyListScope.artistAboutTab(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
+                .background(AppPageBackground)
                 .padding(horizontal = MelodiaSpacing.md, vertical = 20.dp)
         ) {
             Text(
@@ -74,7 +76,7 @@ fun LazyListScope.artistAboutTab(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
+                    .background(AppPageBackground)
                     .padding(vertical = MelodiaSpacing.md)
             ) {
                 Text(

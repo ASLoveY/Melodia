@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -40,7 +41,9 @@ class PlaybackRepositoryImpl(
         }
     }
 
-    override fun getSongUrl(songId: Long): Flow<Result<String>> = apiFlow(
+    override fun getSongUrl(songId: Long): Flow<Result<String>> = resolveSong(songId).map { result -> result.map { it.url } }
+
+    override fun resolveSong(songId: Long): Flow<Result<ResolvedAudioSource>> = apiFlow(
         request = {
             val quality = if (isWifiConnected()) {
                 settingsPreferences.wifiQuality.first()
@@ -52,7 +55,10 @@ class PlaybackRepositoryImpl(
         // 该歌曲可能需要开启 VIP 或版权受限：code=200 但 url 为空，也算失败
         isSuccess = { it.isSuccess && !it.data.firstOrNull()?.url.isNullOrBlank() },
         code = { it.code },
-        transform = { it.data.first().url!! }
+        transform = {
+            val item = it.data.first()
+            ResolvedAudioSource(item.url!!, if (!item.md5.isNullOrBlank()) "remote:$songId:${item.br}:${item.size}:${item.md5}" else "")
+        }
     )
 
     override fun getLyrics(songId: Long): Flow<Result<List<LyricLine>>> = apiFlow(

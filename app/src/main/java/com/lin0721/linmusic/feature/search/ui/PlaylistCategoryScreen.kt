@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.search.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -78,7 +80,7 @@ fun PlaylistCategoryScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(AppPageBackground)
         ) {
             when (val state = uiState) {
                 PlaylistCategoryUiState.Loading -> {

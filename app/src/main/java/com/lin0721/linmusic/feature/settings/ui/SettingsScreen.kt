@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.settings.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
@@ -95,11 +97,11 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = AppBackground
+                    containerColor = AppPageBackground
                 )
             )
         },
-        containerColor = AppBackground
+        containerColor = AppPageBackground
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -158,6 +160,7 @@ private fun MainSettingsMenu(
         contentPadding = PaddingValues(bottom = LocalBottomOverlayInset.current + 16.dp, top = 8.dp)
     ) {
         item { ThemeSettingsContent(themeMode, viewModel::updateThemeMode) }
+        item { BackgroundSettingsContent(viewModel) }
         // 多级设置菜单入口组
         item {
             SettingsGroupCard("常规设置") {

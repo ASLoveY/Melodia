@@ -33,7 +33,8 @@ class SettingsViewModel(
     private val settingsPreferences: SettingsPreferences,
     private val userPreferences: UserPreferences,
     private val authRepository: AuthRepository,
-    private val resourceProvider: ResourceProvider
+    private val resourceProvider: ResourceProvider,
+    private val backgroundRepository: com.lin0721.linmusic.core.preferences.BackgroundRepository
 ) : ViewModel() {
 
     // DataStore 的偏好流统一以相同策略转为 StateFlow，避免每项重复五行样板
@@ -49,6 +50,32 @@ class SettingsViewModel(
     }
 
     val themeMode = settingsPreferences.themeMode.asState(com.lin0721.linmusic.core.preferences.AppThemeMode.SYSTEM)
+    val playbackEffects = settingsPreferences.playbackEffects.asState(com.lin0721.linmusic.core.preferences.PlaybackEffectsSettings())
+    val background = backgroundRepository.background.asState(com.lin0721.linmusic.core.preferences.BackgroundSettings())
+    private val _backgroundBusy = MutableStateFlow(false)
+    val backgroundBusy = _backgroundBusy.asStateFlow()
+
+    fun updatePlaybackEffects(value: com.lin0721.linmusic.core.preferences.PlaybackEffectsSettings) = guardedSave {
+        settingsPreferences.savePlaybackEffects(value)
+    }
+    fun previewBackgroundTransparency(value: Int) = backgroundRepository.previewTransparency(value)
+    fun saveBackgroundTransparency(value: Int) = guardedSave { backgroundRepository.saveTransparency(value) }
+    fun importBackground(uri: android.net.Uri) {
+        if (_backgroundBusy.value) return
+        _backgroundBusy.value = true
+        guardedSave { try { backgroundRepository.importImage(uri) } finally { _backgroundBusy.value = false } }
+    }
+    fun resetBackground() {
+        if (_backgroundBusy.value) return
+        _backgroundBusy.value = true
+        guardedSave { try { backgroundRepository.reset() } finally { _backgroundBusy.value = false } }
+    }
+    private fun guardedSave(block: suspend () -> Unit) = viewModelScope.launch {
+        try { block() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: OutOfMemoryError) { _toastEvent.emit("可用内存不足，请选择较小的图片后重试") }
+        catch (error: Exception) { _toastEvent.emit(error.message ?: "设置保存失败，请重试") }
+    }
 
     fun updateThemeMode(mode: com.lin0721.linmusic.core.preferences.AppThemeMode) {
         viewModelScope.launch {

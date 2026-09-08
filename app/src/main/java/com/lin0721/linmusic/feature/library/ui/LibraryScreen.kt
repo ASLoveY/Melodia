@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.library.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -123,7 +125,7 @@ fun LibraryScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(AppPageBackground)
     ) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             // 1. 顶部栏 (支持搜索展开)

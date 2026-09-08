@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.artist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
@@ -26,7 +28,7 @@ fun LazyListScope.artistAlbumTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp)
-                    .background(MaterialTheme.colorScheme.background),
+                    .background(AppPageBackground),
                 contentAlignment = Alignment.Center
             ) {
                 Text("暂无专辑", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)

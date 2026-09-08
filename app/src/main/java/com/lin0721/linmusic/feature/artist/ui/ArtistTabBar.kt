@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.artist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,7 +28,7 @@ fun ArtistTabBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
+            .background(AppPageBackground)
             .padding(horizontal = MelodiaSpacing.md, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(28.dp)
     ) {

@@ -1,5 +1,7 @@
 package com.lin0721.linmusic.feature.playlist.ui
 
+import com.lin0721.linmusic.core.ui.theme.AppPageBackground
+
 import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 
 import com.lin0721.linmusic.core.ui.theme.AppText
@@ -35,7 +37,7 @@ fun PlaylistRecordFilterRow(
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
+            .background(AppPageBackground)
             .padding(vertical = 12.dp),
         contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
