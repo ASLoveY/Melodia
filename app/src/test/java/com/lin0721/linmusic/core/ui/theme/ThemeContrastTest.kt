@@ -1,10 +1,22 @@
 package com.lin0721.linmusic.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ThemeContrastTest {
+    @Test fun lighterWallpaperScrimKeepsReadableTextOnBrightAndDarkPictures() {
+        for (base in listOf(MelodiaLightColors, MelodiaDarkColors)) {
+            val colors = wallpaperColors(base)
+            for (picture in listOf(Color.Black, Color.White, Color.Red, Color.Green, Color.Blue, Color.Yellow)) {
+                val background = base.background.copy(alpha = WALLPAPER_SCRIM_ALPHA).compositeOver(picture)
+                for (text in listOf(colors.onBackground, colors.onSurface, colors.onSurfaceVariant, colors.primary)) {
+                    assertTrue("$text on $background", contrastRatio(text, background) >= 4.5)
+                }
+            }
+        }
+    }
     @Test fun bodySecondaryAndAccentTextHaveReadableContrastInBothThemes() {
         for (scheme in listOf(MelodiaLightColors, MelodiaDarkColors)) {
             val surfaces = listOf(scheme.background, scheme.surface, scheme.surfaceVariant,

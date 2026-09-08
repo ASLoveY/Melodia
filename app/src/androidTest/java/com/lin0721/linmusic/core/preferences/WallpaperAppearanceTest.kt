@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -42,7 +43,8 @@ class WallpaperAppearanceTest {
             compose.onNodeWithTag("app_wallpaper").assertDoesNotExist()
             compose.runOnIdle { assertNotEquals(Color.Transparent, pageColor); dark = true; enabled = true; settings = settings.copy(transparency = 0) }
             compose.onNodeWithTag("app_wallpaper").assertExists()
-            assertTrue(centerColor().red < .25f)
+            val expected = MelodiaDarkColors.background.copy(alpha = WALLPAPER_SCRIM_ALPHA).compositeOver(Color.Red)
+            assertEquals(expected.red, centerColor().red, .02f)
         } finally { file.delete() }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,6 +19,14 @@ import org.koin.compose.koinInject
 import java.io.File
 
 private val LocalWallpaperVisible = staticCompositionLocalOf { false }
+internal const val WALLPAPER_SCRIM_ALPHA = .65f
+val isAppWallpaperVisible: Boolean @Composable @ReadOnlyComposable get() = LocalWallpaperVisible.current
+
+// The lighter scrim needs stronger foregrounds, rather than hiding the picture again.
+internal fun wallpaperColors(colors: ColorScheme): ColorScheme = colors.copy(
+    onSurfaceVariant = colors.onSurface,
+    primary = colors.onPrimaryContainer
+)
 val AppPageBackground: Color @Composable @ReadOnlyComposable get() =
     if (LocalWallpaperVisible.current) Color.Transparent else MaterialTheme.colorScheme.background
 
@@ -39,8 +48,11 @@ internal fun WallpaperContent(settings: BackgroundSettings, enabled: Boolean, co
                 alpha = 1f - settings.transparency.coerceIn(0, 100) / 100f,
                 modifier = Modifier.fillMaxSize().then(if (visible) Modifier.testTag("app_wallpaper") else Modifier))
             // One shared readability layer prevents multiple nested page backgrounds from accumulating.
-            if (visible) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = .9f)))
+            if (visible) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = WALLPAPER_SCRIM_ALPHA)))
         }
-        CompositionLocalProvider(LocalWallpaperVisible provides visible, content = content)
+        CompositionLocalProvider(LocalWallpaperVisible provides visible) {
+            MaterialTheme(colorScheme = if (visible) wallpaperColors(MaterialTheme.colorScheme) else MaterialTheme.colorScheme,
+                content = content)
+        }
     }
 }

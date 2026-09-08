@@ -60,6 +60,7 @@ import com.lin0721.linmusic.core.ui.interaction.pressable
 import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.AppSurfaceRaised
 import com.lin0721.linmusic.core.ui.theme.AppHeaderTint
+import com.lin0721.linmusic.core.ui.theme.isAppWallpaperVisible
 import com.lin0721.linmusic.core.ui.theme.MelodiaPress
 import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 import com.lin0721.linmusic.core.ui.theme.PressStyle
@@ -153,7 +154,8 @@ fun HomeSharedHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(AppHeaderTint, AppBackground)))
+            .testTag("home_shared_header")
+            .then(if (isAppWallpaperVisible) Modifier else Modifier.background(Brush.verticalGradient(listOf(AppHeaderTint, AppBackground))))
             .statusBarsPadding()
     ) {
         TopGreetingBar(

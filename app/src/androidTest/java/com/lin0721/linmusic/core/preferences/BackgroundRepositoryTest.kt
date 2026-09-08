@@ -16,6 +16,46 @@ class BackgroundRepositoryTest {
     private val prefs = SettingsPreferences(context)
     private val repository = BackgroundRepository(context, prefs)
 
+    private fun patternedPng(): ByteArray {
+        val bitmap = Bitmap.createBitmap(256, 512, Bitmap.Config.ARGB_8888)
+        val pixels = IntArray(256 * 512) { i -> android.graphics.Color.rgb(i % 251, (i / 256) % 251, (i * 37) % 251) }
+        bitmap.setPixels(pixels, 0, 256, 0, 0, 256, 512)
+        return java.io.ByteArrayOutputStream().use { output ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, output); bitmap.recycle(); output.toByteArray()
+        }
+    }
+
+    @Test fun fragmentedSingleReadProviderImportsAllRows() = runBlocking {
+        val before = prefs.background.first()
+        prefs.saveBackgroundImage(null)
+        try {
+            com.lin0721.linmusic.validation.WallpaperPipeProvider.bytes = patternedPng()
+            com.lin0721.linmusic.validation.WallpaperPipeProvider.reads.set(0)
+            repository.importImage(Uri.parse("content://${context.packageName}.wallpaper-validation/image"))
+            val saved = BitmapFactory.decodeFile(prefs.background.first().imagePath)
+            assertEquals(256, saved.width); assertEquals(512, saved.height)
+            for (y in listOf(0, 128, 256, 511)) assertEquals(255, android.graphics.Color.alpha(saved.getPixel(128, y)))
+            assertEquals(1, com.lin0721.linmusic.validation.WallpaperPipeProvider.reads.get())
+            saved.recycle()
+        } finally { repository.reset(); prefs.saveBackgroundImage(before.imagePath) }
+    }
+
+    @androidx.test.filters.SdkSuppress(minSdkVersion = 28)
+    @Test fun truncatedPngCannotReplaceAnExistingBackground() = runBlocking {
+        val before = prefs.background.first()
+        prefs.saveBackgroundImage(null)
+        val source = File(context.cacheDir, "wallpaper-truncated.png")
+        try {
+            val full = patternedPng()
+            source.writeBytes(full)
+            repository.importImage(Uri.fromFile(source))
+            val valid = prefs.background.first().imagePath
+            source.writeBytes(full.copyOf(full.size / 2))
+            assertTrue(runCatching { repository.importImage(Uri.fromFile(source)) }.isFailure)
+            assertEquals(valid, prefs.background.first().imagePath)
+        } finally { repository.reset(); prefs.saveBackgroundImage(before.imagePath); source.delete() }
+    }
+
     @Test fun imageCopySurvivesSourceRemovalReplacementAndInvalidImport() = runBlocking {
         val before = prefs.background.first()
         // Preserve any existing user's saved image while this test exercises its own copy.
