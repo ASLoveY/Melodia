@@ -341,8 +341,8 @@ fun SearchScreen(
 
             androidx.compose.animation.AnimatedVisibility(
                 visible = isSearchActive && inputState.isSuggesting && inputState.suggestions.isNotEmpty(),
-                enter = fadeIn(tween(200)) + expandVertically(tween(200)),
-                exit = fadeOut(tween(ANIM_EXIT_DURATION)) + shrinkVertically(tween(ANIM_EXIT_DURATION))
+                enter = expandVertically(tween(200)),
+                exit = shrinkVertically(tween(ANIM_EXIT_DURATION))
             ) {
                 SuggestionDropdown(
                     suggestions = inputState.suggestions,
@@ -394,7 +394,8 @@ private fun SuggestionDropdown(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(AppPageBackground)
+            // This overlays results: wallpaper-aware page transparency would expose their text.
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         suggestions.forEach { suggestion ->
             Row(
