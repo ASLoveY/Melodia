@@ -19,7 +19,7 @@ import org.koin.compose.koinInject
 import java.io.File
 
 private val LocalWallpaperVisible = staticCompositionLocalOf { false }
-internal const val WALLPAPER_SCRIM_ALPHA = .65f
+internal const val WALLPAPER_SCRIM_ALPHA = .35f
 val isAppWallpaperVisible: Boolean @Composable @ReadOnlyComposable get() = LocalWallpaperVisible.current
 
 // The lighter scrim needs stronger foregrounds, rather than hiding the picture again.

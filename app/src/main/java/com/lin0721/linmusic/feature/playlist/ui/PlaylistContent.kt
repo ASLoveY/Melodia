@@ -192,6 +192,21 @@ fun PlaylistContent(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
+            } else if (playlist.id == -1L && playlist.tracks.isEmpty()) {
+                item(key = "daily_recommend_empty") {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("暂时没有每日推荐", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "网易云暂未返回歌曲，可稍后刷新。",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedButton(onClick = onLoadDailyRecommend) { Text("刷新每日推荐") }
+                    }
+                }
             } else {
                 playlistTrackItems(
                     tracks             = sortedTracks,

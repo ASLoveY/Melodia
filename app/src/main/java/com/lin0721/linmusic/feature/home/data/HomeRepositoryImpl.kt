@@ -6,10 +6,16 @@ import com.lin0721.linmusic.feature.home.domain.HomeBlockPage
 import com.lin0721.linmusic.feature.home.domain.ToplistInfo
 import com.lin0721.linmusic.feature.home.domain.toHomeBlockPage
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.emitAll
+import com.lin0721.linmusic.core.auth.UserPreferences
+import com.lin0721.linmusic.core.auth.SessionChangedException
+import com.lin0721.linmusic.core.network.AppError
 
 class HomeRepositoryImpl(
     private val apiService: HomeApi,
-    private val contentFilter: ContentFilter
+    private val contentFilter: ContentFilter,
+    private val userPreferences: UserPreferences
 ) : HomeRepository {
 
     override fun getHomeBlockPage(refresh: Boolean, cursor: String): Flow<Result<HomeBlockPage>> = apiFlow(
@@ -46,12 +52,24 @@ class HomeRepositoryImpl(
         }
     )
 
-    override fun getDailyRecommendSongs(): Flow<Result<List<DailySong>>> = apiFlow(
-        request = { apiService.getDailyRecommendSongs() },
-        isSuccess = { it.isSuccess && it.data != null },
+    override fun getDailyRecommendSongs(): Flow<Result<List<DailySong>>> = flow {
+        val session = userPreferences.currentSessionTag()
+        if (session == null) { emit(Result.failure(AppError.Unauthorized)); return@flow }
+        emitAll(apiFlow(
+        request = {
+            resolveDailyRecommendations(
+                primary = { apiService.getDailyRecommendSongs(sessionTag = session) },
+                legacy = { apiService.getLegacyDailyRecommendSongs(sessionTag = session) }
+            )
+        },
+        isSuccess = { it.isSuccess && it.songs != null },
         code = { it.code },
-        transform = { contentFilter.filterBlockedArtists(it.data!!.dailySongs) { song -> song.ar.map { a -> a.id } } }
-    )
+        msg = { it.message ?: "每日推荐暂未返回歌曲列表，请稍后重试" },
+        transform = {
+            if (userPreferences.currentSessionTag() != session) throw SessionChangedException()
+            contentFilter.filterBlockedArtists(it.songs!!.filter { song -> song.id > 0 }) { song -> song.ar.map { a -> a.id } }
+        }
+    )) }
 
     override fun getHistoryRecommendDates(): Flow<Result<List<String>>> = apiFlow(
         request = { apiService.getHistoryRecommendDates() },
@@ -66,4 +84,13 @@ class HomeRepositoryImpl(
         code = { it.code },
         transform = { contentFilter.filterBlockedArtists(it.data!!.dailySongs) { song -> song.ar.map { a -> a.id } } }
     )
+}
+
+/** Retry only an incomplete successful payload; never conceal login or service errors. */
+internal suspend fun resolveDailyRecommendations(
+    primary: suspend () -> DailyRecommendSongsResponse,
+    legacy: suspend () -> DailyRecommendSongsResponse
+): DailyRecommendSongsResponse {
+    val response = primary()
+    return if (response.isSuccess && response.songs == null) legacy() else response
 }

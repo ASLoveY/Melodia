@@ -14,13 +14,15 @@ fun PlaybackDownloadSettingsView(viewModel: SettingsViewModel) {
     val autoPlayNext by viewModel.autoPlayNext.collectAsStateWithLifecycle()
     val streamCacheEnabled by viewModel.streamCacheEnabled.collectAsStateWithLifecycle()
     val effects by viewModel.playbackEffects.collectAsStateWithLifecycle()
+    val ldacState by viewModel.ldacMonitor.state.collectAsStateWithLifecycle()
 
     // 渲染播放与下载的子设置项
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(MelodiaSpacing.md),
         contentPadding = PaddingValues(top = 8.dp, bottom = LocalBottomOverlayInset.current + 16.dp)
     ) {
-        item { PlaybackEffectsSettingsContent(effects, viewModel::updatePlaybackEffects) }
+        item { LdacSettingsContent(viewModel) }
+        item { PlaybackEffectsSettingsContent(effects, viewModel::updatePlaybackEffects, ldacState.precisionActive) }
         item {
             SettingsGroupCard("播放参数") {
                 SettingsSwitchRow(

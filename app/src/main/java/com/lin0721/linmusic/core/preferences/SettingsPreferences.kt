@@ -17,6 +17,7 @@ private val Context.settingsDataStore by preferencesDataStore(name = "settings_p
 class SettingsPreferences(private val context: Context) {
 
     companion object {
+        private val KEY_LDAC_EXPERIMENT = booleanPreferencesKey("ldac_experiment_enabled")
         private val KEY_CROSSFADE = booleanPreferencesKey("crossfade_enabled")
         private val KEY_CROSSFADE_SECONDS = intPreferencesKey("crossfade_seconds")
         private val KEY_NORMALIZATION = booleanPreferencesKey("normalization_enabled")
@@ -74,6 +75,9 @@ class SettingsPreferences(private val context: Context) {
     val playbackEffects: Flow<PlaybackEffectsSettings> = context.settingsDataStore.data.map {
         PlaybackEffectsSettings(it[KEY_CROSSFADE] ?: true, (it[KEY_CROSSFADE_SECONDS] ?: 3).coerceIn(1, 12), it[KEY_NORMALIZATION] ?: true)
     }
+
+    val ldacExperimentEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[KEY_LDAC_EXPERIMENT] ?: false }
+    suspend fun saveLdacExperiment(enabled: Boolean) { context.settingsDataStore.edit { it[KEY_LDAC_EXPERIMENT] = enabled } }
 
     suspend fun savePlaybackEffects(value: PlaybackEffectsSettings) {
         context.settingsDataStore.edit {

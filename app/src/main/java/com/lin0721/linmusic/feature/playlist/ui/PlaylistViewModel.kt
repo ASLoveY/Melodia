@@ -2,6 +2,7 @@ package com.lin0721.linmusic.feature.playlist.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lin0721.linmusic.feature.home.data.dailyRecommendMessage
 import com.lin0721.linmusic.core.auth.UserPreferences
 import com.lin0721.linmusic.core.auth.UserProfile
 import com.lin0721.linmusic.core.model.PlaylistDetail
@@ -53,6 +54,7 @@ class PlaylistViewModel(
     private var currentRecIndex = 0
 
     private var isAlbumMode = false
+    private var currentPlaylistId: Long? = null
     private var loadJob: Job? = null
 
     private val _uiState = MutableStateFlow<PlaylistUiState>(PlaylistUiState.Loading)
@@ -94,6 +96,7 @@ class PlaylistViewModel(
     }
 
     fun loadPlaylist(id: Long, isAlbum: Boolean = false) {
+        currentPlaylistId = id
         isAlbumMode = isAlbum
         _uiState.value = PlaylistUiState.Loading
         allRecommendedTracks = emptyList()
@@ -117,7 +120,8 @@ class PlaylistViewModel(
                                     name = song.name,
                                     ar = song.ar,
                                     al = song.al,
-                                    fee = song.fee
+                                    fee = song.fee,
+                                    dt = song.dt
                                 )
                             }
                             val detail = PlaylistDetail(
@@ -132,7 +136,7 @@ class PlaylistViewModel(
                             allRecommendedTracks = emptyList()
                         },
                         onFailure = { error ->
-                            _uiState.value = PlaylistUiState.Error(error.toUserMessage(resourceProvider))
+                            _uiState.value = PlaylistUiState.Error(error.dailyRecommendMessage(resourceProvider), error == com.lin0721.linmusic.core.network.AppError.Unauthorized)
                         }
                     )
                 }
@@ -238,6 +242,8 @@ class PlaylistViewModel(
             _toastEvent.emit("登录成功，正在同步数据...")
             if (syncProfileAfterLoginUseCase(cookies) != null) {
                 loadLikedSongIds()
+                // Re-login can keep the same uid, so a UI effect keyed only by uid will not fire.
+                if (currentPlaylistId == -1L) { loadPlaylist(-1L); loadHistoryDates() }
             }
         }
     }

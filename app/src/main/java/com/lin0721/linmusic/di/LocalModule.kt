@@ -12,6 +12,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val localModule = module {
+    single { com.lin0721.linmusic.core.player.ldac.LdacMonitor(androidContext()) }
     single { com.lin0721.linmusic.core.preferences.BackgroundRepository(androidContext(), get()) }
     single<LocalMusicRepository> { LocalMusicRepositoryImpl(androidContext()) }
     single { PlaybackPreferences(androidContext()) }

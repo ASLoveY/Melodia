@@ -34,7 +34,8 @@ class SettingsViewModel(
     private val userPreferences: UserPreferences,
     private val authRepository: AuthRepository,
     private val resourceProvider: ResourceProvider,
-    private val backgroundRepository: com.lin0721.linmusic.core.preferences.BackgroundRepository
+    private val backgroundRepository: com.lin0721.linmusic.core.preferences.BackgroundRepository,
+    val ldacMonitor: com.lin0721.linmusic.core.player.ldac.LdacMonitor
 ) : ViewModel() {
 
     // DataStore 的偏好流统一以相同策略转为 StateFlow，避免每项重复五行样板
@@ -51,6 +52,8 @@ class SettingsViewModel(
 
     val themeMode = settingsPreferences.themeMode.asState(com.lin0721.linmusic.core.preferences.AppThemeMode.SYSTEM)
     val playbackEffects = settingsPreferences.playbackEffects.asState(com.lin0721.linmusic.core.preferences.PlaybackEffectsSettings())
+    val ldacEnabled = settingsPreferences.ldacExperimentEnabled.asState(false)
+    fun updateLdacEnabled(enabled: Boolean) = guardedSave { settingsPreferences.saveLdacExperiment(enabled) }
     val background = backgroundRepository.background.asState(com.lin0721.linmusic.core.preferences.BackgroundSettings())
     private val _backgroundBusy = MutableStateFlow(false)
     val backgroundBusy = _backgroundBusy.asStateFlow()

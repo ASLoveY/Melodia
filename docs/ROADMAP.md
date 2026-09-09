@@ -1,12 +1,16 @@
 # 后续开发顺序
 
+## v1.7.0-beta.1
+
+35% 背景衬底、蓝牙 A2DP 高精度 PCM / LDAC 状态诊断实验、每日推荐 WEAPI 回退与空状态/登录恢复修复已实现。已用真实账号验证空日推、歌单与在线播放；非空日推及实体 LDAC 链路仍待验证，按 beta 发布。[验证记录与限制](LDAC_BETA_TESTING.md)。USB bit-perfect 仍按下方路线推进。
+
 ## 新增方向：Android Hi-Res 音频输出（待实现）
 
 以 Android 16 为主要验收平台，覆盖 Android 14/15/17；优先官方 USB DAC 首选混音属性路线，不能仅凭系统版本或音源“Hi-Res”标签判断实际输出质量。
 
 实施顺序：输出诊断 → 高精度 PCM 解码/输出 → USB 格式协商及可选 bit-perfect → 实体 DAC 与多厂商设备验收。高精度模式与现有交叉淡化、响度均衡分开；bit-perfect 模式停用修改 PCM 的处理，失败时明确回退。
 
-完整依据、版本差异、当前 16-bit 路径限制和验收门槛见 [Hi-Res 调研](HI_RES_AUDIO_RESEARCH.md)。本轮只完成调研和背景修复，不宣称已经实现 Hi-Res 输出。
+完整依据、版本差异和验收门槛见 [Hi-Res 调研](HI_RES_AUDIO_RESEARCH.md)。该调研记录 v1.6.1 的 16-bit 路径基线；v1.7.0-beta.1 已增加蓝牙高精度路径实验，尚未验证端到端 Hi-Res 输出。
 
 ## 已完成的功能记录
 

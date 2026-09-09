@@ -97,6 +97,8 @@ class PlayerManager(
     private var effects = PlaybackEffectsSettings()
     var crossfadePlayer: CrossfadePlayer? = null
     private var handoffPosition: Pair<String, Long>? = null
+    private var outputSwitchPosition: Pair<String, Long>? = null
+    fun onOutputModeSwitch(mediaId: String, positionMs: Long) { outputSwitchPosition = mediaId to positionMs }
 
     fun invalidatePreparation() {
         queueGeneration++
@@ -691,6 +693,15 @@ class PlayerManager(
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        outputSwitchPosition?.takeIf { it.first == mediaItem?.mediaId }?.let { (_, position) ->
+            outputSwitchPosition = null
+            _currentTrack.value = mediaItem
+            progress.setPosition(position)
+            progress.updateDurationFromController()
+            saveState()
+            return
+        }
+        outputSwitchPosition = null
         AppLogger.i(TAG, "切歌: songId=${mediaItem?.mediaId} reason=${transitionReasonName(reason)}")
         reportPlayedTrack()
         resetTrackTiming()

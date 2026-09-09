@@ -47,6 +47,7 @@ class MelodiaPlaybackService : MediaSessionService() {
     private val settingsPreferences: SettingsPreferences by inject()
     private val userPreferences: UserPreferences by inject()
     private val songLikeRepository: SongLikeRepository by inject()
+    private val ldacMonitor: com.lin0721.linmusic.core.player.ldac.LdacMonitor by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val likedSongIdsCache = mutableSetOf<Long>()
@@ -106,11 +107,14 @@ class MelodiaPlaybackService : MediaSessionService() {
             onNext = playerManager::playNext, onPrevious = playerManager::playPrevious,
             acceptHandoff = playerManager::acceptCrossfade,
             onInvalidatePreparation = playerManager::invalidatePreparation,
-            isTransitionCurrent = playerManager::isTransitionCurrent)
+            isTransitionCurrent = playerManager::isTransitionCurrent,
+            ldacMonitor = ldacMonitor, onOutputModeSwitch = playerManager::onOutputModeSwitch)
         crossfade = forwardingPlayer
         playerManager.crossfadePlayer = forwardingPlayer
         player = forwardingPlayer
         serviceScope.launch { settingsPreferences.playbackEffects.collect { forwardingPlayer.effects = it } }
+        ldacMonitor.start()
+        serviceScope.launch { settingsPreferences.ldacExperimentEnabled.collect { forwardingPlayer.setBluetoothPrecisionRequested(it) } }
         ContextCompat.registerReceiver(this, noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), ContextCompat.RECEIVER_NOT_EXPORTED)
 
         // 点击通知时跳转回应用；REORDER_TO_FRONT 避免每次新建 Activity 实例导致重新加载
@@ -168,6 +172,7 @@ class MelodiaPlaybackService : MediaSessionService() {
         playerManager.release()
         playerManager.saveState()
         serviceScope.cancel()
+        ldacMonitor.stop()
         mediaSession?.run {
             release()
             mediaSession = null

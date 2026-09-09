@@ -9,10 +9,11 @@ import com.lin0721.linmusic.core.preferences.PlaybackEffectsSettings
 import kotlin.math.roundToInt
 
 @Composable
-fun PlaybackEffectsSettingsContent(settings: PlaybackEffectsSettings, onChange: (PlaybackEffectsSettings) -> Unit) {
+fun PlaybackEffectsSettingsContent(settings: PlaybackEffectsSettings, onChange: (PlaybackEffectsSettings) -> Unit, precisionActive: Boolean = false) {
     var seconds by remember(settings.crossfadeSeconds) { mutableFloatStateOf(settings.crossfadeSeconds.toFloat()) }
     SettingsGroupCard("歌曲过渡与响度") {
         Column {
+            if (precisionActive) Text("高精度模式正在使用，以下效果暂不生效；退出后恢复原设置。")
             SettingsSwitchRow("交叉淡化", "仅在歌曲自然结束时重叠过渡，手动切歌立即响应", settings.crossfadeEnabled,
                 { onChange(settings.copy(crossfadeEnabled = it)) })
             Text("过渡时长：${seconds.roundToInt()} 秒")

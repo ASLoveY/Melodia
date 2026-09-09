@@ -14,7 +14,7 @@ sealed interface PlaylistUiState {
         val recommendedSongs: List<Track> = emptyList(),
         val isSubscribed: Boolean = false
     ) : PlaylistUiState
-    data class Error(val message: String) : PlaylistUiState
+    data class Error(val message: String, val requiresLogin: Boolean = false) : PlaylistUiState
 }
 
 // 历史日推（每日推荐/听歌排行）的浏览状态，独立于页面主加载态

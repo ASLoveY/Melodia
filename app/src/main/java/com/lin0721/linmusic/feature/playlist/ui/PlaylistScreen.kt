@@ -68,9 +68,9 @@ fun PlaylistScreen(
     LaunchedEffect(viewModel) {
         viewModel.toastEvent.collect { com.lin0721.linmusic.core.ui.components.ToastManager.showToast(it) }
     }
-    LaunchedEffect(playlistId, isAlbum) {
+    LaunchedEffect(playlistId, isAlbum, if (playlistId == -1L) userProfile?.uid else null) {
         viewModel.loadPlaylist(playlistId, isAlbum)
-        if (playlistId == -1L) {
+        if (playlistId == -1L && userProfile != null) {
             viewModel.loadHistoryDates()
         }
     }
@@ -84,13 +84,13 @@ fun PlaylistScreen(
             is PlaylistUiState.Error ->
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("加载失败", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                        Text(if (state.requiresLogin) "登录后查看每日推荐" else "加载失败", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(MelodiaSpacing.sm))
                         Text(state.message, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                         Spacer(Modifier.height(MelodiaSpacing.md))
-                        MelodiaButton(onClick = { viewModel.loadPlaylist(playlistId, isAlbum) },
+                        MelodiaButton(onClick = { if (state.requiresLogin) showLoginSheet = true else viewModel.loadPlaylist(playlistId, isAlbum) },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                            Text("重试", color = MaterialTheme.colorScheme.onPrimary)
+                            Text(if (state.requiresLogin) "登录" else "重试", color = MaterialTheme.colorScheme.onPrimary)
                         }
                         MelodiaTextButton(onClick = onBack) { Text("返回", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }

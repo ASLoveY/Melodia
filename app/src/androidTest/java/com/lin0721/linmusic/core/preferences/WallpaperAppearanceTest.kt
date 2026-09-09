@@ -43,7 +43,7 @@ class WallpaperAppearanceTest {
             compose.onNodeWithTag("app_wallpaper").assertDoesNotExist()
             compose.runOnIdle { assertNotEquals(Color.Transparent, pageColor); dark = true; enabled = true; settings = settings.copy(transparency = 0) }
             compose.onNodeWithTag("app_wallpaper").assertExists()
-            val expected = MelodiaDarkColors.background.copy(alpha = WALLPAPER_SCRIM_ALPHA).compositeOver(Color.Red)
+            val expected = MelodiaDarkColors.background.copy(alpha = .35f).compositeOver(Color.Red)
             assertEquals(expected.red, centerColor().red, .02f)
         } finally { file.delete() }
     }

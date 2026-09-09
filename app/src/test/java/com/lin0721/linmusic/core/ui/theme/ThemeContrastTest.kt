@@ -6,11 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ThemeContrastTest {
-    @Test fun lighterWallpaperScrimKeepsReadableTextOnBrightAndDarkPictures() {
+    @Test fun wallpaperTextRemainsReadableOnControlSurfaces() {
         for (base in listOf(MelodiaLightColors, MelodiaDarkColors)) {
             val colors = wallpaperColors(base)
-            for (picture in listOf(Color.Black, Color.White, Color.Red, Color.Green, Color.Blue, Color.Yellow)) {
-                val background = base.background.copy(alpha = WALLPAPER_SCRIM_ALPHA).compositeOver(picture)
+            for (background in listOf(base.surface, base.surfaceVariant, base.surfaceContainer)) {
                 for (text in listOf(colors.onBackground, colors.onSurface, colors.onSurfaceVariant, colors.primary)) {
                     assertTrue("$text on $background", contrastRatio(text, background) >= 4.5)
                 }

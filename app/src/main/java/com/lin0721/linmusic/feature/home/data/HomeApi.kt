@@ -5,6 +5,9 @@ import com.lin0721.linmusic.core.model.Artist
 import com.lin0721.linmusic.core.model.EmptyBody
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
+import com.lin0721.linmusic.core.auth.UserSessionTag
+import retrofit2.http.Tag
 import retrofit2.http.Body
 import retrofit2.http.POST
 
@@ -25,9 +28,18 @@ interface HomeApi {
     ): PersonalizedResponse
 
     // 获取每日推荐歌曲（需登录，每天 06:00 更新）
-    @POST("/eapi/v3/discovery/recommend/songs")
+    @POST("/weapi/v3/discovery/recommend/songs")
     suspend fun getDailyRecommendSongs(
-        @Body body: EmptyBody = EmptyBody()
+        @Body body: EmptyBody = EmptyBody(),
+        @Tag sessionTag: UserSessionTag? = null
+    ): DailyRecommendSongsResponse
+
+    // Some authenticated accounts receive code=200/data=null from v3. The legacy
+    // daily endpoint distinguishes a valid empty recommendation list from a broken payload.
+    @POST("/weapi/v1/discovery/recommend/songs")
+    suspend fun getLegacyDailyRecommendSongs(
+        @Body body: LegacyDailyRecommendRequest = LegacyDailyRecommendRequest(),
+        @Tag sessionTag: UserSessionTag? = null
     ): DailyRecommendSongsResponse
 
     // 获取可用的历史日推日期列表（黑胶 VIP 功能）
@@ -83,24 +95,36 @@ data class PersonalizedPlaylist(
 // ======================= 每日推荐歌曲模型 =======================
 
 @Serializable
+data class LegacyDailyRecommendRequest(val limit: Int = 30, val total: Boolean = true)
+
+@Serializable
 data class DailyRecommendSongsResponse(
     val code: Int = 0,
-    val data: DailyRecommendData? = null
+    val data: DailyRecommendData? = null,
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @JsonNames("dailySongs") val recommend: List<DailySong>? = null,
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @JsonNames("msg") val message: String? = null
 ) {
     val isSuccess: Boolean get() = code == 200
+    val songs: List<DailySong>? get() = data?.dailySongs ?: recommend
 }
 
 @Serializable
 data class DailyRecommendData(
-    val dailySongs: List<DailySong> = emptyList()
+    val dailySongs: List<DailySong>? = null
 )
 
 @Serializable
 data class DailySong(
     val id: Long = 0,
     val name: String = "",
-    val ar: List<Artist> = emptyList(),
-    val al: Album = Album(),
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @JsonNames("artists") val ar: List<Artist> = emptyList(),
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @JsonNames("album") val al: Album = Album(),
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @JsonNames("duration") val dt: Long = 0,
     val fee: Int = 0,
     // 推荐理由（例如："根据你喜欢的 xxx 推荐"）
     val reason: String? = null
