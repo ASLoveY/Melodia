@@ -1,5 +1,9 @@
 # 后续开发顺序
 
+## v1.7.0-beta.3
+
+LDAC 实验模式改用系统原生引擎并保留缓存/本地源读取、队列和统一媒体会话；OnePlus 13s / Android 16 + WF-1000XM5 已实测绕过原有 48 kHz 混音，进入 DIRECT / 96 kHz。后续覆盖更多音源与机型、长时间稳定性和耳机断连恢复；[实现与验收](NATIVE_DIRECT_OUTPUT.md)。
+
 ## v1.7.0-beta.1
 
 35% 背景衬底、蓝牙 A2DP 高精度 PCM / LDAC 状态诊断实验、每日推荐 WEAPI 回退与空状态/登录恢复修复已实现。已用真实账号验证空日推、歌单与在线播放；非空日推及实体 LDAC 链路仍待验证，按 beta 发布。[验证记录与限制](LDAC_BETA_TESTING.md)。USB bit-perfect 仍按下方路线推进。

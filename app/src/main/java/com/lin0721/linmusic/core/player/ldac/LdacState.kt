@@ -10,7 +10,11 @@ data class LdacState(
     val decoded: PcmFormat? = null,
     val output: PcmFormat? = null,
     val precisionActive: Boolean = false,
-    val fallback: Boolean = false
+    val fallback: Boolean = false,
+    val nativePlayback: Boolean = false,
+    val sourceSampleRate: Int? = null,
+    val sourceMimeType: String? = null,
+    val nativeSessionId: Int? = null
 ) {
     val matchingCodec: BluetoothCodecObservation? get() = codec?.takeIf {
         bluetoothRoute && !routeAddress.isNullOrBlank() && it.address.equals(routeAddress, ignoreCase = true)

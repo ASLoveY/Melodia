@@ -80,7 +80,8 @@ class LdacMonitor(private val context: Context) {
         if (started) { context.unregisterReceiver(receiver); started = false }
         observations.clear(); _state.value = LdacState()
     }
-    fun publish(routes: List<AudioDeviceInfo>, decoded: PcmFormat?, output: PcmFormat?, precision: Boolean, fallback: Boolean) {
+    fun publish(routes: List<AudioDeviceInfo>, decoded: PcmFormat?, output: PcmFormat?, precision: Boolean, fallback: Boolean,
+                nativePlayback: Boolean = false, sourceSampleRate: Int? = null, sourceMimeType: String? = null, nativeSessionId: Int? = null) {
         if (!hasPermission()) observations.clear()
         val route = routes.singleOrNull()
         val address = if (Build.VERSION.SDK_INT >= 28) route?.address?.takeIf { it.isNotBlank() }?.lowercase() else null
@@ -88,7 +89,8 @@ class LdacMonitor(private val context: Context) {
             routeName = if (routes.size > 1) "多个输出设备" else route?.productName?.toString()?.ifBlank { "音频设备" } ?: "等待播放以确认路由",
             bluetoothRoute = route?.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             routeAddress = address, codec = address?.let(observations::get), decoded = decoded, output = output,
-            precisionActive = precision, fallback = fallback
+            precisionActive = precision, fallback = fallback, nativePlayback = nativePlayback,
+            sourceSampleRate = sourceSampleRate, sourceMimeType = sourceMimeType, nativeSessionId = nativeSessionId
         )
     }
     private fun refreshCodec() { _state.value = _state.value.copy(codec = _state.value.routeAddress?.let(observations::get)) }

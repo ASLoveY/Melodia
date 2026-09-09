@@ -19,6 +19,7 @@ import android.os.Build
 import android.os.SystemClock
 import com.lin0721.linmusic.core.player.ldac.LdacMonitor
 import com.lin0721.linmusic.core.player.ldac.PcmFormat
+import com.lin0721.linmusic.core.player.ldac.NativePrecisionPlayer
 import com.lin0721.linmusic.core.player.ldac.shouldUseBluetoothPrecision
 import java.util.concurrent.ConcurrentHashMap
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -42,7 +43,7 @@ class CrossfadePlayer(
     private val ldacMonitor: LdacMonitor? = null,
     private val onOutputModeSwitch: (String, Long) -> Unit = { _, _ -> },
     private val bluetoothRouteOverride: (() -> Boolean)? = null,
-    private val precisionTrackProvider: DefaultAudioSink.AudioTrackProvider = DefaultAudioSink.AudioTrackProvider.DEFAULT
+    private val precisionPlayerFactory: (() -> Player)? = null
 ) : SimpleBasePlayer(Looper.getMainLooper()) {
     private val handler = Handler(Looper.getMainLooper())
     private val profiles = LoudnessProfileStore(context)
@@ -50,24 +51,24 @@ class CrossfadePlayer(
     private val audioTracks = ConcurrentHashMap<Int, AudioTrack>()
     private val decodedFormats = ConcurrentHashMap<Int, PcmFormat>()
     private val outputFormats = ConcurrentHashMap<Int, PcmFormat>()
-    private var precisionDeck: ExoPlayer? = null
+    private var precisionDeck: Player? = null
     private var precisionActive = false
     val highPrecisionActive: Boolean get() = precisionActive
     private var precisionRequested = false
     private var failedPrecisionKey: String? = null
     private var preferredDevice: AudioDeviceInfo? = null
     private var nextDiagnosticAt = 0L
-    private fun createDeck(index: Int, precise: Boolean): ExoPlayer {
+    private fun createDeck(index: Int): ExoPlayer {
         val renderers = object : DefaultRenderersFactory(context) {
             override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink {
-                val builder = DefaultAudioSink.Builder(context).setEnableFloatOutput(precise)
+                val builder = DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
                     .setAudioTrackProvider { config, attributes, sessionId ->
-                        (if (precise) precisionTrackProvider else DefaultAudioSink.AudioTrackProvider.DEFAULT).getAudioTrack(config, attributes, sessionId).also {
+                        DefaultAudioSink.AudioTrackProvider.DEFAULT.getAudioTrack(config, attributes, sessionId).also {
                             audioTracks[index] = it
                             outputFormats[index] = PcmFormat(config.sampleRate, config.encoding)
                         }
                     }
-                if (!precise) builder.setAudioProcessors(arrayOf(processors[index]))
+                builder.setAudioProcessors(arrayOf(processors[index]))
                 return object : ForwardingAudioSink(builder.build()) {
                     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
                         decodedFormats[index] = PcmFormat(inputFormat.sampleRate, inputFormat.pcmEncoding)
@@ -80,9 +81,9 @@ class CrossfadePlayer(
             setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), false)
         }
     }
-    private val decks = Array(2) { createDeck(it, false) }
+    private val decks = Array(2) { createDeck(it) }
     private var activeIndex = 0
-    val activeDeck: ExoPlayer get() = if (precisionActive) requireNotNull(precisionDeck) else decks[activeIndex]
+    val activeDeck: Player get() = if (precisionActive) requireNotNull(precisionDeck) else decks[activeIndex]
     private val standby: ExoPlayer get() = decks[1 - activeIndex]
     private var prepared: PreparedTransition? = null
     private var fadeStartMs: Long? = null
@@ -123,7 +124,7 @@ class CrossfadePlayer(
             updateVolumes(); invalidateState()
         }, handler).build()
 
-    private fun listenTo(deck: ExoPlayer) {
+    private fun listenTo(deck: Player) {
         deck.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 if (!precisionActive && deck === activeDeck && reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) processors[activeIndex].complete(deck.duration)
@@ -231,7 +232,11 @@ class CrossfadePlayer(
 
     fun setPreferredAudioDevice(device: AudioDeviceInfo?) {
         preferredDevice = device
-        decks.forEach { it.setPreferredAudioDevice(device) }; precisionDeck?.setPreferredAudioDevice(device)
+        decks.forEach { it.setPreferredAudioDevice(device) }
+        precisionDeck?.let { setDeckDevice(it, device) }
+    }
+    private fun setDeckDevice(deck: Player, device: AudioDeviceInfo?) {
+        when (deck) { is ExoPlayer -> deck.setPreferredAudioDevice(device); is NativePrecisionPlayer -> deck.setPreferredAudioDevice(device) }
     }
 
     fun setBluetoothPrecisionRequested(enabled: Boolean) {
@@ -240,6 +245,7 @@ class CrossfadePlayer(
         refreshOutput()
     }
     private fun currentRoutes(): List<AudioDeviceInfo> = runCatching {
+        if (precisionActive) return@runCatching (precisionDeck as? NativePrecisionPlayer)?.routes.orEmpty()
         val track = audioTracks[if (precisionActive) 2 else activeIndex] ?: return@runCatching emptyList()
         if (Build.VERSION.SDK_INT >= 36) track.routedDevices else listOfNotNull(track.routedDevice)
     }.getOrDefault(emptyList())
@@ -254,7 +260,9 @@ class CrossfadePlayer(
         if (!precisionRequested) switchPrecision(false)
         else if (precisionActive && bluetoothRouteOverride == null && audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).none { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP }) switchPrecision(false)
         else if (routes.isNotEmpty() || bluetoothRouteOverride != null) switchPrecision(shouldUseBluetoothPrecision(precisionRequested, a2dp, failed))
-        ldacMonitor?.publish(routes, decodedFormats[slot], outputFormats[slot], precisionActive, failed)
+        val native = activeDeck as? NativePrecisionPlayer
+        ldacMonitor?.publish(routes, if (precisionActive) null else decodedFormats[slot], if (precisionActive) null else outputFormats[slot], precisionActive, failed,
+            nativePlayback = native != null, sourceSampleRate = native?.sourceSampleRate, sourceMimeType = native?.sourceMimeType, nativeSessionId = native?.nativeSessionId)
     }
 
     private fun switchPrecision(enabled: Boolean) {
@@ -266,11 +274,11 @@ class CrossfadePlayer(
         val wasPlaying = previous.playWhenReady
         val repeat = previous.repeatMode
         cancelPreparation(); onInvalidatePreparation()
-        if (enabled && precisionDeck == null) precisionDeck = createDeck(2, true).also(::listenTo)
+        if (enabled && precisionDeck == null) precisionDeck = (precisionPlayerFactory?.invoke() ?: NativePrecisionPlayer(context, dataSource)).also(::listenTo)
         suppressEvents = true
         previous.pause(); previous.stop(); previous.clearMediaItems()
         precisionActive = enabled
-        activeDeck.setPreferredAudioDevice(preferredDevice)
+        setDeckDevice(activeDeck, preferredDevice)
         activeDeck.repeatMode = repeat
         activeDeck.volume = userVolume * duckVolume
         if (item != null) {

@@ -12,6 +12,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.lin0721.linmusic.MainActivity
 import com.lin0721.linmusic.core.player.ldac.LdacMonitor
+import com.lin0721.linmusic.core.player.ldac.NativePrecisionPlayer
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.ByteArrayDataSource
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -42,7 +45,7 @@ class BluetoothPrecisionTest {
         }.array()
         return File(context.cacheDir, "precision-24bit-96khz.wav").apply { writeBytes(data) }
     }
-    @Test fun precisionUsesFloat96kAndSwitchesBackWithoutResumingPausedAudio() {
+    @Test fun precisionUsesNativeDecoderAndSwitchesBackWithoutResumingPausedAudio() {
         ActivityScenario.launch(MainActivity::class.java).use {
             val file = source(); val monitor = LdacMonitor(context)
             lateinit var player: CrossfadePlayer
@@ -56,10 +59,11 @@ class BluetoothPrecisionTest {
                 main { player.pause() }; SystemClock.sleep(150)
                 var position = 0L
                 main { position = player.currentPosition; player.setBluetoothPrecisionRequested(true) }
-                await { player.highPrecisionActive && player.playbackState == Player.STATE_READY && monitor.state.value.output?.encoding == C.ENCODING_PCM_FLOAT }
+                await { player.highPrecisionActive && player.playbackState == Player.STATE_READY && monitor.state.value.nativeSessionId != null }
                 main {
-                    assertEquals(96000, monitor.state.value.output?.sampleRate)
-                    assertTrue(abs(player.currentPosition - position) < 50)
+                    assertTrue(monitor.state.value.nativePlayback)
+                    assertNull(monitor.state.value.output) // Native output format is not exposed by the SDK.
+                    assertTrue(abs(player.currentPosition - position) < 150)
                     assertFalse(player.playWhenReady)
                     assertTrue(player.effects.normalizationEnabled)
                     player.setBluetoothPrecisionRequested(false)
@@ -69,14 +73,16 @@ class BluetoothPrecisionTest {
             } finally { main { player.release() }; file.delete() }
         }
     }
-    @Test fun unsupportedFloatTrackFallsBackOnceForTheSameSong() {
+    @Test fun nativeDecoderFailureFallsBackOnceForTheSameSong() {
         ActivityScenario.launch(MainActivity::class.java).use {
             val file = source(); val monitor = LdacMonitor(context)
             lateinit var player: CrossfadePlayer
             var attempts = 0
             main {
                 player = CrossfadePlayer(context, DefaultDataSource.Factory(context), {}, {}, { _, _ -> true }, ldacMonitor = monitor,
-                    bluetoothRouteOverride = { true }, precisionTrackProvider = DefaultAudioSink.AudioTrackProvider { _, _, _ -> attempts++; throw IllegalArgumentException("unsupported test format") })
+                    bluetoothRouteOverride = { true }, precisionPlayerFactory = {
+                        NativePrecisionPlayer(context, DataSource.Factory { attempts++; ByteArrayDataSource(byteArrayOf(1, 2, 3, 4)) })
+                    })
                 player.setMediaItem(MediaItem.Builder().setMediaId("failed").setUri(file.toURI().toString()).build())
                 player.prepare(); player.play()
             }

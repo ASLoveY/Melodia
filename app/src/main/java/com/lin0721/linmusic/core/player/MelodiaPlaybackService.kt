@@ -55,7 +55,7 @@ class MelodiaPlaybackService : MediaSessionService() {
 
     private var player: Player? = null
     private var crossfade: CrossfadePlayer? = null
-    private val exoPlayer: ExoPlayer? get() = crossfade?.activeDeck
+    private val playbackDeck: Player? get() = crossfade?.activeDeck
     private val noisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) crossfade?.pauseForNoisyOutput()
@@ -238,7 +238,7 @@ class MelodiaPlaybackService : MediaSessionService() {
     }
 
     private fun updateCustomLayoutForController(session: MediaSession, controller: MediaSession.ControllerInfo) {
-        val currentMediaItem = exoPlayer?.currentMediaItem
+        val currentMediaItem = playbackDeck?.currentMediaItem
         val isLocalAudio = currentMediaItem?.isLocalAudio == true
         val songId = currentMediaItem?.mediaId?.toLongOrNull() ?: -1L
         val isLiked = songId != -1L && songId in likedSongIdsCache
@@ -280,7 +280,7 @@ class MelodiaPlaybackService : MediaSessionService() {
 
     private fun updateCustomLayout() {
         val session = mediaSession ?: return
-        val currentMediaItem = exoPlayer?.currentMediaItem
+        val currentMediaItem = playbackDeck?.currentMediaItem
         val isLocalAudio = currentMediaItem?.isLocalAudio == true
         val songId = currentMediaItem?.mediaId?.toLongOrNull() ?: -1L
         val isLiked = songId != -1L && songId in likedSongIdsCache

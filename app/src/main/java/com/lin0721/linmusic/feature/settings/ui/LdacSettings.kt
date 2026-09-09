@@ -45,16 +45,22 @@ fun LdacSettingsContent(viewModel: SettingsViewModel) {
 @Composable
 internal fun LdacSettingsPanel(enabled: Boolean, state: LdacState, onToggle: (Boolean) -> Unit, onBluetoothSettings: () -> Unit, onPermission: (() -> Unit)?) {
     SettingsGroupCard("蓝牙 LDAC · Beta") {
-        SettingsSwitchRow("LDAC 高精度实验模式", "实际路由为蓝牙 A2DP 时使用高精度 PCM，暂时停用交叉淡化和响度均衡", enabled, onToggle)
+        SettingsSwitchRow("LDAC 高精度实验模式", "蓝牙 A2DP 播放时使用系统原生引擎，尝试高采样率直出；暂时停用交叉淡化和响度均衡", enabled, onToggle)
         Text(when {
             !enabled -> "实验模式已关闭"
             state.fallback -> "高精度输出失败，已回退普通播放"
-            state.precisionActive -> "应用高精度路径已启用"
+            state.precisionActive -> "原生高精度播放已启用"
             else -> "等待蓝牙 A2DP 播放路由"
         }, modifier = Modifier.testTag("ldac_status"))
         Text("当前路由：${state.routeName}")
-        Text("解码 PCM：${state.decoded?.describe() ?: "等待播放"}")
-        Text("AudioTrack：${state.output?.describe() ?: "等待播放"}")
+        if (state.nativePlayback) {
+            Text("音源：${state.sourceSampleRate?.let { "${it / 1000.0} kHz" } ?: "采样率未提供"} · ${state.sourceMimeType ?: "格式未提供"}")
+            Text("原生音频会话：${state.nativeSessionId ?: "等待准备"}")
+            Text("实际混音/直出格式需设备验证；音源采样率和 LDAC 配置不能代替系统输出测量。", style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text("解码 PCM：${state.decoded?.describe() ?: "等待播放"}")
+            Text("AudioTrack：${state.output?.describe() ?: "等待播放"}")
+        }
         Text(if (state.confirmedLdac) "系统报告：LDAC ${state.codec?.sampleRate?.let { "${it / 1000.0} kHz" }.orEmpty()} ${state.codec?.bits?.let { "$it-bit" }.orEmpty()}"
             else "蓝牙编码：${state.matchingCodec?.name ?: "未确认；请在系统设置中检查 LDAC"}")
         Text("LDAC 由手机与耳机协商，本应用不能强制切换或锁定 990 kbps。显示的 PCM 格式不代表蓝牙链路格式，也不代表无损或 bit-perfect。", style = MaterialTheme.typography.bodySmall)
