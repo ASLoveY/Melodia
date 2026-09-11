@@ -44,10 +44,10 @@ fun LdacSettingsContent(viewModel: SettingsViewModel) {
 
 @Composable
 internal fun LdacSettingsPanel(enabled: Boolean, state: LdacState, onToggle: (Boolean) -> Unit, onBluetoothSettings: () -> Unit, onPermission: (() -> Unit)?) {
-    SettingsGroupCard("蓝牙 LDAC · Beta") {
-        SettingsSwitchRow("LDAC 高精度实验模式", "蓝牙 A2DP 播放时使用系统原生引擎，尝试高采样率直出；暂时停用交叉淡化和响度均衡", enabled, onToggle)
+    SettingsGroupCard("蓝牙 Hi-Res 输出") {
+        SettingsSwitchRow("Hi-Res 输出", "蓝牙 A2DP 播放时使用系统原生引擎，尝试高采样率直出；暂时停用交叉淡化和响度均衡", enabled, onToggle)
         Text(when {
-            !enabled -> "实验模式已关闭"
+            !enabled -> "Hi-Res 输出已关闭"
             state.fallback -> "高精度输出失败，已回退普通播放"
             state.precisionActive -> "原生高精度播放已启用"
             else -> "等待蓝牙 A2DP 播放路由"

@@ -62,7 +62,9 @@ class PlayerManager(
     private val stateStore = PlaybackStateStore(scope, playbackPreferences)
     private val coverPreloader = TrackCoverPreloader(context)
     private val sleepTimer = SleepTimer(scope) { pause() }
-    private val roaming = SimilarRoamingController(scope, repository, settingsPreferences, playbackQueue, stateStore)
+    private val roaming = SimilarRoamingController(scope, repository, playbackQueue,
+        autoPlayEnabled = { settingsPreferences.autoPlayNext.first() },
+        persistQueue = { stateStore.saveQueue(playbackQueue) }, persistMode = stateStore::savePlayMode)
     private val networkGuard = PlaybackNetworkGuard(
         context = context,
         scope = scope,
@@ -216,6 +218,8 @@ class PlayerManager(
 
         if (playContext == SimilarRoamingController.CONTEXT_ROAMING) {
             roaming.prepare()
+        } else if (roaming.isRoaming) {
+            roaming.disable()
         }
 
         playbackQueue.setPlayContext(playContext)
@@ -223,6 +227,21 @@ class PlayerManager(
         consecutiveErrors = 0
         saveQueueState()
         fetchUrlAndPlay(playbackQueue.currentIndex.value)
+    }
+
+    // Enter roaming without restarting the currently sounding item.
+    fun startRoamingFromCurrent(expectedQueue: List<QueueItem>, seedKey: String, recommendations: List<QueueItem>): Boolean {
+        if (playbackQueue.items.value !== expectedQueue || playbackQueue.currentItem()?.stableKey != seedKey ||
+            currentTrack.value?.mediaId != seedKey) return false
+        val seed = playbackQueue.currentItem() ?: return false
+        val following = recommendations.filter { !it.isLocal && it.songId > 0 && it.stableKey != seedKey }.distinctBy { it.stableKey }
+        if (following.isEmpty()) return false
+        roaming.prepare()
+        playbackQueue.setPlayContext(SimilarRoamingController.CONTEXT_ROAMING)
+        playbackQueue.replaceAll(listOf(seed) + following, 0)
+        controllerHolder.setRepeatMode(PlayMode.LIST_LOOP)
+        saveQueueState()
+        return true
     }
 
     // 单曲播放（向后兼容，创建 1 项队列）
@@ -674,6 +693,7 @@ class PlayerManager(
     // 关闭漫游并还原备份的队列数据
     fun disableRoaming() {
         roaming.disable()
+        controllerHolder.setRepeatMode(playbackQueue.playMode.value)
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {

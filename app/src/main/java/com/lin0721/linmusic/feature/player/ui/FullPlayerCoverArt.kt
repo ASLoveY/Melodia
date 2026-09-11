@@ -85,6 +85,7 @@ fun FullPlayerCoverArt(
                     "搜索" -> "播放自" to "搜索"
                     "每日推荐" -> "播放自" to "每日推荐"
                     "历史日推" -> "播放自" to "历史日推"
+                    "similar_roaming" -> "播放自" to "相似歌曲漫游"
                     else -> "播放自歌单" to playContext
                 }
                 Text(

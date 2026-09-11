@@ -16,6 +16,10 @@ class PlaybackQueue {
     // 进入漫游前的队列快照
     private var snapshotItems: List<QueueItem> = emptyList()
     private var snapshotIndex: Int = -1
+    private var snapshotOriginal: List<QueueItem> = emptyList()
+    private var snapshotMode = PlayMode.LIST_LOOP
+    private var snapshotContext: String? = null
+    private var hasSnapshot = false
 
     private val _currentIndex = MutableStateFlow(-1)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
@@ -228,7 +232,8 @@ class PlaybackQueue {
     // 截断到指定下标后追加新曲目，用于漫游续播
     fun appendAfter(index: Int, items: List<QueueItem>) {
         if (items.isEmpty()) return
-        val newQueue = originalItems.take(index + 1) + items
+        if (index !in playItems.indices) return
+        val newQueue = playItems.take(index + 1) + items
         originalItems = newQueue
         playItems = newQueue
         _items.value = playItems
@@ -236,32 +241,40 @@ class PlaybackQueue {
 
     // 备份当前队列，供退出漫游时还原
     fun takeSnapshot() {
-        snapshotItems = originalItems
+        hasSnapshot = true
+        snapshotItems = playItems.toList()
+        snapshotOriginal = originalItems.toList()
         snapshotIndex = _currentIndex.value
+        snapshotMode = _playMode.value
+        snapshotContext = _playContext.value
     }
 
     // 还原备份的队列，并把当前正在播放的曲目定位到新队列中
     fun restoreSnapshot() {
-        if (snapshotItems.isEmpty()) return
-        originalItems = snapshotItems
+        if (!hasSnapshot) return
+        hasSnapshot = false
+        if (snapshotItems.isEmpty()) {
+            _playMode.value = snapshotMode
+            _playContext.value = snapshotContext
+            return
+        }
         val currentTrackItem = playItems.getOrNull(_currentIndex.value)
-        val newIndex = if (currentTrackItem != null) {
-            val idx = snapshotItems.indexOfFirst { it.stableKey == currentTrackItem.stableKey }
-            if (idx != -1) idx else snapshotIndex.coerceIn(0, snapshotItems.size - 1)
-        } else {
-            snapshotIndex.coerceIn(0, snapshotItems.size - 1)
+        originalItems = snapshotOriginal
+        playItems = snapshotItems
+        if (currentTrackItem != null && playItems.none { it.stableKey == currentTrackItem.stableKey }) {
+            val insertion = (snapshotIndex + 1).coerceIn(0, playItems.size)
+            playItems = playItems.toMutableList().apply { add(insertion, currentTrackItem) }
+            val seedKey = snapshotItems.getOrNull(snapshotIndex)?.stableKey
+            val originalInsertion = (originalItems.indexOfFirst { it.stableKey == seedKey } + 1).coerceIn(0, originalItems.size)
+            originalItems = originalItems.toMutableList().apply { add(originalInsertion, currentTrackItem) }
         }
-
-        if (_playMode.value == PlayMode.SHUFFLE) {
-            playItems = shufflePreservingCurrent(snapshotItems, newIndex)
-            _currentIndex.value = 0
-        } else {
-            playItems = snapshotItems
-            _currentIndex.value = newIndex
-        }
-
+        _currentIndex.value = playItems.indexOfFirst { it.stableKey == currentTrackItem?.stableKey }.takeIf { it >= 0 }
+            ?: snapshotIndex.coerceIn(0, playItems.size - 1)
+        _playMode.value = snapshotMode
+        _playContext.value = snapshotContext
         _items.value = playItems
         snapshotItems = emptyList()
+        snapshotOriginal = emptyList()
         snapshotIndex = -1
     }
 

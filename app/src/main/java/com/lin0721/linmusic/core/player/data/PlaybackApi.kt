@@ -14,7 +14,7 @@ interface PlaybackApi {
         @Body body: SongUrlRequest
     ): SongUrlResponse
 
-    @POST("/eapi/v1/discovery/simiSong")
+    @POST("/weapi/v1/discovery/simiSong")
     suspend fun getSimiSongs(
         @Body body: SimiSongRequest
     ): SimiSongResponse
@@ -112,7 +112,9 @@ data class LyricContent(
 
 @Serializable
 data class SimiSongRequest(
-    val songid: String
+    val songid: String,
+    val limit: Int = 50,
+    val offset: Int = 0
 )
 
 @Serializable

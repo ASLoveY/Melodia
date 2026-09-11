@@ -525,6 +525,7 @@ class PlayerViewModel(
     fun startSimilarSongsRoaming(songId: Long, currentTitle: String, currentArtist: String, currentCoverUrl: String) {
         if (!isCurrentRemoteSong(songId)) return
         val requestMediaId = currentMediaId ?: return
+        val expectedQueue = playerManager.queue.value
         viewModelScope.launch {
             playbackRepository.getSimilarSongs(songId).collect { result ->
                 if (!isCurrentMedia(requestMediaId)) return@collect
@@ -539,9 +540,11 @@ class PlayerViewModel(
                                 coverUrl = track.al.picUrl
                             )
                         }
-                        val roamingQueue = listOf(currentItem) + simiItems
-                        playerManager.playQueue(roamingQueue, 0, playContext = "similar_roaming")
-                        _toastEvent.emit("已开启相似歌曲漫游")
+                        if (playerManager.startRoamingFromCurrent(expectedQueue, currentItem.stableKey, simiItems)) {
+                            _toastEvent.emit("已开启相似歌曲漫游")
+                        } else {
+                            _toastEvent.emit("歌曲或队列已变化，请重新开启漫游")
+                        }
                     } else {
                         _toastEvent.emit("未找到相关相似歌曲")
                     }

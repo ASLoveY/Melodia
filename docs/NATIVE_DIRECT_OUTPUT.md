@@ -1,5 +1,7 @@
 # v1.7.0-beta.3：修复 LDAC 播放经过 48 kHz 混音的问题
 
+Hi-Res 输出已在 v1.7.0 转为正式功能，本文保留其实现和实机验证依据；最新发布范围见 [正式版验收](V1_7_0_VALIDATION.md)。
+
 在 OnePlus 13s（CPH2723，Android 16 / API 36）与 WF-1000XM5 上，beta.2 的应用 AudioTrack 和蓝牙配置均显示 96 kHz，但本应用的活动音轨实际进入了 48 kHz AudioFlinger MIXER。beta.3 改用系统原生音频引擎，在同一设备、耳机和在线曲目上验证进入 DIRECT / 96 kHz 输出，绕过了此前观察到的 48 kHz 框架混音。
 
 ## 实现

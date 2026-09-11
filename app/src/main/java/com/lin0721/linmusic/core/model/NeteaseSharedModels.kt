@@ -41,7 +41,8 @@ data class Track(
     val al: Album = Album(),
     val fee: Int = 0,
     val publishTime: Long = 0, // 歌曲发行时间戳，部分接口在歌曲详情中包含
-    val dt: Long = 0
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @JsonNames("duration") val dt: Long = 0
 )
 
 @Serializable

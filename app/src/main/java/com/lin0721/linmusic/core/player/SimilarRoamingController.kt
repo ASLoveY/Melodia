@@ -1,97 +1,83 @@
 package com.lin0721.linmusic.core.player
 
 import com.lin0721.linmusic.core.log.AppLogger
-import com.lin0721.linmusic.core.preferences.SettingsPreferences
 import com.lin0721.linmusic.core.player.data.PlaybackRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-private const val TAG = "SimilarRoamingController"
-
-// 私人漫游：播放到队列末尾时自动续接相似歌曲，退出漫游时还原原队列
+/** One tail request at a time; late responses cannot replace a user's edited queue. */
 class SimilarRoamingController(
     private val scope: CoroutineScope,
     private val repository: PlaybackRepository,
-    private val settingsPreferences: SettingsPreferences,
     private val queue: PlaybackQueue,
-    private val stateStore: PlaybackStateStore
+    private val autoPlayEnabled: suspend () -> Boolean,
+    private val persistQueue: () -> Unit,
+    private val persistMode: (PlayMode) -> Unit,
+    private val nowMs: () -> Long = { System.nanoTime() / 1_000_000 }
 ) {
-
     companion object {
         const val CONTEXT_ROAMING = "similar_roaming"
-
-        // 距当前曲目结束的续接预取阈值
         private const val PREFETCH_THRESHOLD_MS = 15000L
     }
-
     private var roamingJob: Job? = null
-
-    // 记录已触发过续接的歌曲，避免同一首歌反复拉取
-    private var lastTriggeredSongId = -1L
-
+    private var generation = 0L
+    private var failedSeed: Long? = null
+    private var retryAt = 0L
     val isRoaming: Boolean get() = queue.playContext.value == CONTEXT_ROAMING
 
-    fun cancel() {
-        roamingJob?.cancel()
-    }
-
-    // 进入漫游前备份队列，并强制切回列表循环
+    fun cancel() { generation++; roamingJob?.cancel(); roamingJob = null }
     fun prepare() {
-        queue.takeSnapshot()
+        cancel()
+        if (!isRoaming) queue.takeSnapshot()
+        failedSeed = null
         queue.setPlayMode(PlayMode.LIST_LOOP)
-        stateStore.savePlayMode(PlayMode.LIST_LOOP)
+        persistMode(PlayMode.LIST_LOOP)
     }
-
-    // 起播时若已处于漫游态，后台预取后续歌曲
     fun prefetchOnPlay(songId: Long, index: Int) {
-        if (!isRoaming) return
-        roamingJob = scope.launch {
-            appendSimilarSongs(songId, index)
-        }
+        if (isRoaming && index == queue.size - 1) requestTail(songId, index)
     }
-
-    // 播放到队列末尾且临近结束时触发续接
     suspend fun onProgressTick(songId: Long, remainingMs: Long) {
-        val curIdx = queue.currentIndex.value
-        if (curIdx != queue.size - 1) return
-        if (remainingMs > PREFETCH_THRESHOLD_MS) return
-        if (lastTriggeredSongId == songId) return
-        if (!settingsPreferences.autoPlayNext.first()) return
-
-        lastTriggeredSongId = songId
-        queue.setPlayContext(CONTEXT_ROAMING)
-        appendSimilarSongs(songId, curIdx)
+        val index = queue.currentIndex.value
+        if (songId <= 0 || remainingMs !in 1..PREFETCH_THRESHOLD_MS || index != queue.size - 1 || queue.playMode.value == PlayMode.SINGLE_LOOP) return
+        if (!autoPlayEnabled()) return
+        if (!isRoaming) { prepare(); queue.setPlayContext(CONTEXT_ROAMING) }
+        requestTail(songId, index)
     }
-
-    // 关闭漫游并还原备份的队列数据
     fun disable() {
         if (!isRoaming) return
-        roamingJob?.cancel()
+        cancel(); failedSeed = null
         queue.setPlayContext(null)
         queue.restoreSnapshot()
-        stateStore.saveQueue(queue)
+        persistMode(queue.playMode.value)
+        persistQueue()
     }
-
-    // 异步拉取相似歌曲并替换后继播放队列
-    private suspend fun appendSimilarSongs(songId: Long, index: Int) {
-        repository.getSimilarSongs(songId).collect { result ->
-            result.onSuccess { simiSongs ->
-                if (simiSongs.isNotEmpty() && isRoaming) {
-                    val simiItems = simiSongs.map { track ->
-                        QueueItem(
-                            songId = track.id,
-                            title = track.name,
-                            artist = track.ar.joinToString("/") { it.name },
-                            coverUrl = track.al.picUrl
-                        )
-                    }
-                    queue.appendAfter(index, simiItems)
-                    stateStore.saveQueue(queue)
-                }
-            }.onFailure {
-                AppLogger.w(TAG, "漫游续接相似歌曲失败 songId=$songId", it)
+    private fun requestTail(songId: Long, index: Int) {
+        if (songId <= 0 || roamingJob?.isActive == true || (failedSeed == songId && nowMs() < retryAt)) return
+        val snapshot = queue.items.value
+        val mode = queue.playMode.value
+        val seed = queue.itemAt(index) ?: return
+        if (seed.songId != songId || seed.isLocal) return
+        val token = ++generation
+        roamingJob = scope.launch {
+            try {
+                val songs = repository.getSimilarSongs(songId).first().getOrThrow()
+                if (token != generation || !isRoaming || queue.items.value !== snapshot || queue.playMode.value != mode ||
+                    queue.currentIndex.value != index || queue.currentItem()?.stableKey != seed.stableKey) return@launch
+                val seen = snapshot.map { it.stableKey }.toHashSet()
+                val items = songs.filter { it.id > 0 }.map {
+                    QueueItem(it.id, it.name, it.ar.joinToString("/") { artist -> artist.name }, it.al.picUrl)
+                }.filter { seen.add(it.stableKey) }
+                if (items.isEmpty()) { failedSeed = songId; retryAt = nowMs() + 30000; return@launch }
+                queue.appendAfter(index, items)
+                failedSeed = null
+                persistQueue()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                if (token == generation) { failedSeed = songId; retryAt = nowMs() + 30000 }
+                AppLogger.w("SimilarRoamingController", "Unable to extend roaming queue", error)
             }
         }
     }

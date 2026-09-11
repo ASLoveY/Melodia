@@ -675,14 +675,14 @@ private fun DiscoveryContent(
 private fun HistoryChip(keyword: String, onClick: () -> Unit) {
     Text(
         text = keyword,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = MaterialTheme.colorScheme.onSecondaryContainer,
         fontSize = 14.sp,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.secondaryContainer)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp)
     )
@@ -763,21 +763,21 @@ private fun HotSearchCompactItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.tertiaryContainer)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "$rank",
-            color = if (isTop3) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
             fontWeight = if (isTop3) FontWeight.Bold else FontWeight.Normal,
             fontSize = 15.sp,
             modifier = Modifier.width(20.dp)
         )
         Text(
             text = item.keyword,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
             fontWeight = if (isTop3) FontWeight.Bold else FontWeight.Normal,
             fontSize = 14.sp,
             maxLines = 1,

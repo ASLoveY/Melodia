@@ -236,7 +236,12 @@ class HomeViewModel(
     fun startRoaming() {
         val current = playerManager.currentTrack.value
         if (current != null) {
-            val songId = current.mediaId?.toLongOrNull() ?: return
+            val songId = current.mediaId?.toLongOrNull()
+            if (songId == null || songId <= 0) {
+                viewModelScope.launch { _toastEvent.emit("请先播放一首在线歌曲，再开启相似歌曲漫游") }
+                return
+            }
+            val expectedQueue = playerManager.queue.value
             val title = current.mediaMetadata.title?.toString() ?: ""
             val artist = current.mediaMetadata.artist?.toString() ?: ""
             val coverUrl = current.mediaMetadata.artworkUri?.toString() ?: ""
@@ -253,9 +258,11 @@ class HomeViewModel(
                                     coverUrl = track.al.picUrl
                                 )
                             }
-                            val roamingQueue = listOf(currentItem) + simiItems
-                            playerManager.playQueue(roamingQueue, 0, playContext = "similar_roaming")
-                            _toastEvent.emit("已开启相似歌曲漫游")
+                            if (playerManager.startRoamingFromCurrent(expectedQueue, currentItem.stableKey, simiItems)) {
+                                _toastEvent.emit("已开启相似歌曲漫游")
+                            } else {
+                                _toastEvent.emit("歌曲或队列已变化，请重新开启漫游")
+                            }
                         } else {
                             _toastEvent.emit("未找到相关相似歌曲")
                         }
@@ -267,10 +274,13 @@ class HomeViewModel(
         } else {
             val state = uiState.value
             if (state is HomeUiState.Success && state.data.dailySongs.isNotEmpty()) {
+                val expectedQueue = playerManager.queue.value
                 val firstSong = state.data.dailySongs.first()
                 viewModelScope.launch {
                     playbackRepository.getSimilarSongs(firstSong.id).collect { result ->
                         result.onSuccess { simiSongs ->
+                            if (playerManager.currentTrack.value != null || playerManager.queue.value !== expectedQueue) return@onSuccess
+                            if (simiSongs.isEmpty()) { _toastEvent.emit("未找到相关相似歌曲"); return@onSuccess }
                             val currentItem = QueueItem(firstSong.id, firstSong.name, firstSong.ar.joinToString("/") { it.name }, firstSong.al.picUrl)
                             val simiItems = simiSongs.map { track ->
                                 QueueItem(track.id, track.name, track.ar.joinToString("/") { it.name }, track.al.picUrl)

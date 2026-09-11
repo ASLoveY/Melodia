@@ -7,6 +7,30 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaybackQueueTest {
+    @Test fun roamingTailPreservesActualShuffledOrderAndCurrentTrack() {
+        val queue = queueOf(1, 2, 3, 4)
+        queue.setPlayMode(PlayMode.SHUFFLE); queue.replaceAll(queue.original, 0)
+        queue.setCurrentIndex(3)
+        val before = queue.items.value.toList(); val current = queue.currentItem()
+        queue.takeSnapshot(); queue.setPlayMode(PlayMode.LIST_LOOP)
+        queue.appendAfter(3, listOf(item(8)))
+        assertEquals(before, queue.items.value.take(4)); assertEquals(current, queue.currentItem())
+        queue.restoreSnapshot()
+        assertEquals(before, queue.items.value); assertEquals(PlayMode.SHUFFLE, queue.playMode.value)
+    }
+    @Test fun leavingRoamingKeepsTheSoundingTrackAlignedWithTheQueue() {
+        val queue = queueOf(1, 2, 3, startIndex = 1)
+        queue.setPlayContext("original"); queue.takeSnapshot()
+        queue.replaceAll(listOf(item(2), item(8), item(9)), 1)
+        queue.restoreSnapshot()
+        assertEquals(listOf(1L, 2L, 8L, 3L), queue.ids())
+        assertEquals(8L, queue.currentItem()?.songId); assertEquals("original", queue.playContext.value)
+    }
+    @Test fun anEmptySnapshotStillRestoresPlaybackMode() {
+        val queue = PlaybackQueue(); queue.setPlayMode(PlayMode.SHUFFLE); queue.takeSnapshot()
+        queue.setPlayMode(PlayMode.LIST_LOOP); queue.replaceAll(listOf(item(1)), 0); queue.restoreSnapshot()
+        assertEquals(PlayMode.SHUFFLE, queue.playMode.value); assertEquals(1L, queue.currentItem()?.songId)
+    }
 
     private fun item(id: Long) = QueueItem(songId = id, title = "歌曲$id", artist = "歌手$id", coverUrl = "cover/$id")
 

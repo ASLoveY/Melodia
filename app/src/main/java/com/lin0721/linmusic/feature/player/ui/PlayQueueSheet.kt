@@ -250,8 +250,8 @@ fun PlayQueueSheet(
                     }
                 }
 
-                // 3. "接下来播放" (仅在非漫游模式下显示)
-                if (!isRoaming) {
+                // Roaming recommendations are real queued songs and must remain visible/selectable.
+                run {
                     val upcomingStart = currentIndex + 1
                     if (upcomingStart < queue.size) {
                         item(key = "header_upcoming") {

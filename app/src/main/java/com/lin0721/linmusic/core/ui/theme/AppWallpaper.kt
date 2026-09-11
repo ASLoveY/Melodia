@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.CancellationException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.lin0721.linmusic.core.preferences.BackgroundRepository
@@ -39,6 +41,12 @@ fun AppWallpaper(enabled: Boolean, content: @Composable () -> Unit) {
 
 @Composable
 internal fun WallpaperContent(settings: BackgroundSettings, enabled: Boolean, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val seed by produceState<Color?>(null, settings.imagePath) {
+        value = null
+        val imagePath = settings.imagePath ?: return@produceState
+        value = try { wallpaperSeed(context, imagePath) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+    }
     val path = settings.imagePath.takeIf { enabled }
     val painter = rememberAsyncImagePainter(path?.let(::File))
     val visible = path != null && painter.state is coil.compose.AsyncImagePainter.State.Success
@@ -51,7 +59,8 @@ internal fun WallpaperContent(settings: BackgroundSettings, enabled: Boolean, co
             if (visible) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = WALLPAPER_SCRIM_ALPHA)))
         }
         CompositionLocalProvider(LocalWallpaperVisible provides visible) {
-            MaterialTheme(colorScheme = if (visible) wallpaperColors(MaterialTheme.colorScheme) else MaterialTheme.colorScheme,
+            val base = if (visible) wallpaperColors(MaterialTheme.colorScheme) else MaterialTheme.colorScheme
+            MaterialTheme(colorScheme = if (visible && seed != null) wallpaperScheme(base, seed!!) else base,
                 content = content)
         }
     }

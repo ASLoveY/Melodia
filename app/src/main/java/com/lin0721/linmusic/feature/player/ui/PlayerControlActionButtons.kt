@@ -84,7 +84,7 @@ fun ActionButtons(
                 onClick = onQueueClick,
                 modifier = Modifier.offset(x = 12.dp)
             ) {
-                Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, contentDescription = null, tint = TextGray, modifier = Modifier.size(30.dp))
+                Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, contentDescription = "播放队列", tint = TextGray, modifier = Modifier.size(30.dp))
             }
         }
     }

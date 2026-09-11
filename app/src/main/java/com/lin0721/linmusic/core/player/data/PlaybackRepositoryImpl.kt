@@ -113,7 +113,7 @@ class PlaybackRepositoryImpl(
         request = { apiService.getSimiSongs(SimiSongRequest(songid = songId.toString())) },
         isSuccess = { it.isSuccess },
         code = { it.code },
-        transform = { contentFilter.filterBlockedArtists(it.songs) { song -> song.ar.map { a -> a.id } } }
+        transform = { contentFilter.filterBlockedArtists(it.songs.filter { song -> song.id > 0 && song.id != songId }.distinctBy { song -> song.id }) { song -> song.ar.map { a -> a.id } } }
     )
 
     // 含降级逻辑（心动模式失败自动回退相似歌曲），复杂度超出 apiFlow 模板范围，保留手写 flow
