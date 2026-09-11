@@ -140,7 +140,8 @@ fun MelodiaBottomOverlay(
                     onNavigate = onNavigate,
                     onCreateClick = onCreateClick,
                     isCreateMenuOpen = showCreateSheet,
-                    showCreateEntry = showCreateEntry
+                    showCreateEntry = showCreateEntry,
+                    hazeState = hazeState
                 )
             }
         }

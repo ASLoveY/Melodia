@@ -1,6 +1,5 @@
 package com.lin0721.linmusic.core.ui.components
 
-import com.lin0721.linmusic.core.ui.theme.AppText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -8,11 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddBox
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
@@ -41,10 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.media3.common.MediaItem
 import coil.compose.SubcomposeAsyncImage
-import com.lin0721.linmusic.Screen
-import com.lin0721.linmusic.core.ui.interaction.pressable
-import com.lin0721.linmusic.core.ui.theme.MelodiaPress
-import com.lin0721.linmusic.core.ui.theme.AppBackground
 import com.lin0721.linmusic.core.ui.theme.NeteaseRed
 import com.lin0721.linmusic.core.ui.theme.AppTextSecondary
 import com.lin0721.linmusic.core.ui.theme.extractBackdropPaletteFromUrl
@@ -56,8 +46,6 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import com.lin0721.linmusic.core.ui.theme.FallbackBackdropPalette
-import com.lin0721.linmusic.core.ui.theme.AppSelected
-import com.lin0721.linmusic.core.ui.theme.MelodiaSpacing
 import com.lin0721.linmusic.core.ui.theme.InfoCardRadius
 import com.lin0721.linmusic.core.ui.theme.RadiusCompact
 import com.lin0721.linmusic.core.ui.theme.darken
@@ -289,80 +277,6 @@ fun MiniPlayerProgress(
                 .fillMaxHeight()
                 .background(NeteaseRed)
         )
-    }
-}
-
-//底部导航栏  
-@Composable
-fun MelodiaNavigationBar(
-    currentScreen: Screen,
-    onNavigate: (Screen) -> Unit,
-    onCreateClick: () -> Unit,
-    isCreateMenuOpen: Boolean,
-    showCreateEntry: Boolean = true,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        color = AppBackground,
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .height(60.dp)
-                .padding(top = 12.dp, bottom = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val navItems = buildList {
-                add(Triple("主页", Icons.Default.Home, Screen.Home))
-                add(Triple("搜索", Icons.Default.Search, Screen.Search))
-                add(Triple("音乐库", Icons.Default.LibraryMusic, Screen.Library))
-                if (showCreateEntry) {
-                    add(Triple("创建", if (isCreateMenuOpen) Icons.Rounded.Close else Icons.Default.AddBox, null))
-                }
-            }
-
-            navItems.forEach { (label, icon, targetScreen) ->
-                val isSelected = targetScreen != null && currentScreen == targetScreen
-                
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .pressable(MelodiaPress.Tab) {
-                            if (targetScreen != null) {
-                                onNavigate(targetScreen)
-                            } else {
-                                onCreateClick()
-                            }
-                        },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    // 药丸形状背景
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(if (isSelected) AppSelected else Color.Transparent)
-                            .padding(horizontal = MelodiaSpacing.md, vertical = 1.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = label,
-                            tint = if (isSelected) AppText else AppTextSecondary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Text(
-                        text = label,
-                        color = if (isSelected) AppText else AppTextSecondary,
-                        fontSize = 11.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-            }
-        }
     }
 }
 

@@ -37,9 +37,13 @@ class WallpaperSeedTest {
         val seed = runBlocking { requireNotNull(wallpaperSeed(context, file.path)) }
         var dark by mutableStateOf(false); var enabled by mutableStateOf(true)
         var primary by mutableStateOf(Color.Unspecified)
+        var overlayPrimary by mutableStateOf(Color.Unspecified)
         compose.setContent {
             MelodiaTheme(darkTheme = dark) {
-                WallpaperContent(BackgroundSettings(imagePath = file.path), enabled) {
+                WallpaperContent(BackgroundSettings(imagePath = file.path), enabled, overlay = {
+                    val colors = MaterialTheme.colorScheme
+                    SideEffect { overlayPrimary = colors.primary }
+                }) {
                     val colors = MaterialTheme.colorScheme
                     SideEffect { primary = colors.primary }
                 }
@@ -47,12 +51,12 @@ class WallpaperSeedTest {
         }
         try {
             val light = wallpaperScheme(wallpaperColors(MelodiaLightColors), seed).primary
-            compose.waitUntil(8000) { primary == light }
+            compose.waitUntil(8000) { primary == light && overlayPrimary == light }
             compose.runOnIdle { dark = true }
             val expectedDark = wallpaperScheme(wallpaperColors(MelodiaDarkColors), seed).primary
-            compose.waitUntil(8000) { primary == expectedDark }
+            compose.waitUntil(8000) { primary == expectedDark && overlayPrimary == expectedDark }
             compose.runOnIdle { enabled = false }
-            compose.waitUntil(8000) { primary == MelodiaDarkColors.primary }
+            compose.waitUntil(8000) { primary == MelodiaDarkColors.primary && overlayPrimary == primary }
         } finally { file.delete() }
     }
 }

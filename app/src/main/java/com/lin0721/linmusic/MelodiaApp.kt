@@ -53,7 +53,6 @@ import com.lin0721.linmusic.core.preferences.SettingsPreferences
 import com.lin0721.linmusic.feature.home.ui.HomeViewModel
 import com.lin0721.linmusic.feature.settings.ui.UpdateDialog
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -205,104 +204,106 @@ fun MelodiaApp() {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(if (playerSheet.isOpen) Modifier.haze(hazeState) else Modifier)
                 ) {
-                    com.lin0721.linmusic.core.ui.theme.AppWallpaper(enabled = navigation.currentScreen != Screen.MvPlayer) {
-                    MelodiaNavHost(
-                        currentScreen = navigation.currentScreen,
-                        homeViewModel = viewModel,
-                        activePlaylistId = navigation.activePlaylistId,
-                        activePlaylistIsAlbum = navigation.activePlaylistIsAlbum,
-                        activeArtistId = navigation.activeArtistId,
-                        activeRadioId = navigation.activeRadioId,
-                        activeMvId = navigation.activeMvId,
-                        activeMvName = navigation.activeMvName,
-                        activePlaylistCategory = navigation.activePlaylistCategory,
-                        homeTab = navigation.homeTab,
-                        showMusicNewWorks = navigation.showMusicNewWorks,
-                        searchAutoFocus = navigation.searchAutoFocus,
-                        onOpenSidebar = { sidebar.open() },
-                        onLoginScreenVisibilityChanged = { isLoginScreenVisible = it },
-                        onNavigateToPlaylist = { id, isAlbum -> navigation.openPlaylist(id, isAlbum) },
-                        onNavigateToArtist = { id -> navigation.openArtist(id) },
-                        onNavigateToRadio = { id -> navigation.openRadio(id) },
-                        onNavigateToMv = { id, name -> navigation.openMvPlayer(id, name) },
-                        onMvFullscreenChanged = { isMvFullscreen = it },
-                        onNavigateToPlaylistCategory = { category -> navigation.openPlaylistCategory(category) },
-                        onHomeTabSelected = { navigation.selectHomeTab(it) },
-                        onShowMusicNewWorksChanged = { navigation.updateShowMusicNewWorks(it) },
-                        onNavigateToSearch = { navigation.openSearch(autoFocus = true) },
-                        onNavigateToSettings = { navigation.navigateTo(Screen.Settings) },
-                        onBack = { navigation.navigateBack() }
-                    )
+                    com.lin0721.linmusic.core.ui.theme.AppWallpaper(
+                        enabled = navigation.currentScreen != Screen.MvPlayer,
+                        hazeState = hazeState,
+                        overlay = {
+                            // 创建菜单遮罩
+                            if (showCreateSheet) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.4f))
+                                        .pressable(MelodiaPress.None) {
+                                            showCreateSheet = false
+                                            openCreateDialogRequest = null
+                                        }
+                                )
+                            }
 
-                    }
-
-                    // 创建菜单遮罩
-                    if (showCreateSheet) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.4f))
-                                .pressable(MelodiaPress.None) {
+                            // 放置在应用了平移 graphicsLayer 的主 Box 内部的底部
+                            MelodiaBottomOverlay(
+                                modifier = Modifier.align(Alignment.BottomCenter),
+                                currentScreen = navigation.currentScreen,
+                                showCreateSheet = showCreateSheet,
+                                isLoginScreenVisible = isLoginScreenVisible ||
+                                        createLoginState.surface == CreateLoginSurface.Web ||
+                                        createLoginState.surface == CreateLoginSurface.Syncing,
+                                isMvFullscreen = isMvFullscreen,
+                                currentTrack = currentTrack,
+                                isPlaying = isPlaying,
+                                currentPositionProvider = currentPositionProvider,
+                                duration = duration,
+                                hazeState = hazeState,
+                                onTogglePlay = { viewModel.togglePlayPause() },
+                                onNext = { viewModel.playerManager.playNext() },
+                                onMiniPlayerClick = { playerSheet.animateTo(true, 0f) },
+                                onMiniPlayerDrag = { delta -> playerSheet.onDrag(delta) },
+                                onMiniPlayerDragEnd = { velocity -> playerSheet.onDragEnd(velocity) },
+                                onCreateDismiss = {
                                     showCreateSheet = false
                                     openCreateDialogRequest = null
-                                }
-                        )
-                    }
+                                },
+                                onNavigate = { navigation.openTab(it) },
+                                onCreateClick = {
+                                    showCreateSheet = !showCreateSheet
+                                    if (!showCreateSheet) openCreateDialogRequest = null
+                                },
+                                onLoginRequest = {
+                                    createLoginRequestSequence += 1L
+                                    createLoginState = createLoginState.requestLogin(createLoginRequestSequence)
+                                },
+                                openCreateDialogRequest = openCreateDialogRequest,
+                                // 请求在表单打开时由 CreatePopupMenu 记住，表单关闭时
+                                // 再清除 token，避免重组或返回操作重复打开表单。
+                                onCreateDialogRequestConsumed = {},
+                                onCreateDialogClosed = { openCreateDialogRequest = null },
+                                showCreateEntry = showCreateEntry,
+                                onOverlayHeightChanged = { bottomOverlayHeight = it }
+                            )
 
-                    // 放置在应用了平移 graphicsLayer 的主 Box 内部的底部
-                    MelodiaBottomOverlay(
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                        currentScreen = navigation.currentScreen,
-                        showCreateSheet = showCreateSheet,
-                        isLoginScreenVisible = isLoginScreenVisible ||
-                                createLoginState.surface == CreateLoginSurface.Web ||
-                                createLoginState.surface == CreateLoginSurface.Syncing,
-                        isMvFullscreen = isMvFullscreen,
-                        currentTrack = currentTrack,
-                        isPlaying = isPlaying,
-                        currentPositionProvider = currentPositionProvider,
-                        duration = duration,
-                        hazeState = hazeState,
-                        onTogglePlay = { viewModel.togglePlayPause() },
-                        onNext = { viewModel.playerManager.playNext() },
-                        onMiniPlayerClick = { playerSheet.animateTo(true, 0f) },
-                        onMiniPlayerDrag = { delta -> playerSheet.onDrag(delta) },
-                        onMiniPlayerDragEnd = { velocity -> playerSheet.onDragEnd(velocity) },
-                        onCreateDismiss = {
-                            showCreateSheet = false
-                            openCreateDialogRequest = null
-                        },
-                        onNavigate = { navigation.openTab(it) },
-                        onCreateClick = {
-                            showCreateSheet = !showCreateSheet
-                            if (!showCreateSheet) openCreateDialogRequest = null
-                        },
-                        onLoginRequest = {
-                            createLoginRequestSequence += 1L
-                            createLoginState = createLoginState.requestLogin(createLoginRequestSequence)
-                        },
-                        openCreateDialogRequest = openCreateDialogRequest,
-                        // 请求在表单打开时由 CreatePopupMenu 记住，表单关闭时
-                        // 再清除 token，避免重组或返回操作重复打开表单。
-                        onCreateDialogRequestConsumed = {},
-                        onCreateDialogClosed = { openCreateDialogRequest = null },
-                        showCreateEntry = showCreateEntry,
-                        onOverlayHeightChanged = { bottomOverlayHeight = it }
-                    )
-
-                    // 侧边栏打开时的遮罩与点击收起事件
-                    if (sidebar.progress > 0f) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.4f * sidebar.progress))
-                                .pressable(
-                                    style = MelodiaPress.None,
-                                    enabled = sidebar.isOpen,
-                                    onClick = { sidebar.close() }
+                            // 侧边栏打开时的遮罩与点击收起事件
+                            if (sidebar.progress > 0f) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.4f * sidebar.progress))
+                                        .pressable(
+                                            style = MelodiaPress.None,
+                                            enabled = sidebar.isOpen,
+                                            onClick = { sidebar.close() }
+                                        )
                                 )
+                            }
+                        }
+                    ) {
+                        MelodiaNavHost(
+                            currentScreen = navigation.currentScreen,
+                            homeViewModel = viewModel,
+                            activePlaylistId = navigation.activePlaylistId,
+                            activePlaylistIsAlbum = navigation.activePlaylistIsAlbum,
+                            activeArtistId = navigation.activeArtistId,
+                            activeRadioId = navigation.activeRadioId,
+                            activeMvId = navigation.activeMvId,
+                            activeMvName = navigation.activeMvName,
+                            activePlaylistCategory = navigation.activePlaylistCategory,
+                            homeTab = navigation.homeTab,
+                            showMusicNewWorks = navigation.showMusicNewWorks,
+                            searchAutoFocus = navigation.searchAutoFocus,
+                            onOpenSidebar = { sidebar.open() },
+                            onLoginScreenVisibilityChanged = { isLoginScreenVisible = it },
+                            onNavigateToPlaylist = { id, isAlbum -> navigation.openPlaylist(id, isAlbum) },
+                            onNavigateToArtist = { id -> navigation.openArtist(id) },
+                            onNavigateToRadio = { id -> navigation.openRadio(id) },
+                            onNavigateToMv = { id, name -> navigation.openMvPlayer(id, name) },
+                            onMvFullscreenChanged = { isMvFullscreen = it },
+                            onNavigateToPlaylistCategory = { category -> navigation.openPlaylistCategory(category) },
+                            onHomeTabSelected = { navigation.selectHomeTab(it) },
+                            onShowMusicNewWorksChanged = { navigation.updateShowMusicNewWorks(it) },
+                            onNavigateToSearch = { navigation.openSearch(autoFocus = true) },
+                            onNavigateToSettings = { navigation.navigateTo(Screen.Settings) },
+                            onBack = { navigation.navigateBack() }
                         )
                     }
                 }

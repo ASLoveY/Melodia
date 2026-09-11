@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -41,6 +42,8 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import com.lin0721.linmusic.core.ui.theme.readableContentColor
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
@@ -671,21 +674,28 @@ private fun DiscoveryContent(
     }
 }
 
+private fun searchCardGradient(color: Color): Brush {
+    val ink = readableContentColor(color)
+    val shade = if (ink == Color.White) Color.Black else Color.White
+    return Brush.linearGradient(listOf(color, lerp(color, shade, .16f)))
+}
+
 @Composable
 private fun HistoryChip(keyword: String, onClick: () -> Unit) {
-    Text(
-        text = keyword,
-        color = MaterialTheme.colorScheme.onSecondaryContainer,
-        fontSize = 14.sp,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-    )
+    val color = MaterialTheme.colorScheme.primary
+    val ink = readableContentColor(color)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+            .background(searchCardGradient(color))
+            .border(1.dp, ink.copy(alpha = .12f), RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick).heightIn(min = 56.dp).padding(horizontal = 12.dp, vertical = 12.dp)
+    ) {
+        Icon(Icons.Rounded.History, contentDescription = null, tint = ink.copy(alpha = .8f), modifier = Modifier.size(17.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(keyword, color = ink, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+    }
 }
 
 @Composable
@@ -758,26 +768,36 @@ private fun HotSearchCompactItem(
     onClick: () -> Unit
 ) {
     val isTop3 = rank <= 3
+    val colors = MaterialTheme.colorScheme
+    val accent = when ((rank - 1) % 3) { 0 -> colors.tertiary; 1 -> colors.secondary; else -> colors.primary }
+    val container = when ((rank - 1) % 3) { 0 -> colors.tertiaryContainer; 1 -> colors.secondaryContainer; else -> colors.primaryContainer }
+    val color = lerp(container, accent, if (isTop3) .48f else .30f)
+    val ink = readableContentColor(color)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.tertiaryContainer)
+            .clip(RoundedCornerShape(16.dp))
+            .background(searchCardGradient(color))
+            .border(1.dp, ink.copy(alpha = .10f), RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .heightIn(min = 58.dp)
+            .padding(horizontal = 10.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "$rank",
-            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            color = ink,
             fontWeight = if (isTop3) FontWeight.Bold else FontWeight.Normal,
             fontSize = 15.sp,
-            modifier = Modifier.width(20.dp)
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                .background(ink.copy(alpha = .09f)).width(26.dp).padding(vertical = 4.dp)
         )
+        Spacer(Modifier.width(8.dp))
         Text(
             text = item.keyword,
-            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            color = ink,
             fontWeight = if (isTop3) FontWeight.Bold else FontWeight.Normal,
             fontSize = 14.sp,
             maxLines = 1,
